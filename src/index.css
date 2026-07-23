@@ -1,0 +1,156 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: 'Clash Display';
+  src: url('./assets/fonts/ClashDisplay-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Clash Display';
+  src: url('./assets/fonts/ClashDisplay-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Clash Display';
+  src: url('./assets/fonts/ClashDisplay-Semibold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('./assets/fonts/Inter-Variable.woff2') format('woff2');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme {
+  --font-display: 'Clash Display', ui-sans-serif, sans-serif;
+  --font-sans: 'Inter', -apple-system, sans-serif;
+}
+
+/*
+  Runtime theme tokens — plain CSS custom properties, not Tailwind @theme,
+  because they must flip at runtime via [data-dest] rather than being
+  baked into static utility classes at build time.
+*/
+:root {
+  --color-bg: #0d0d0f;
+  --color-text: #f1efe9;
+  --color-text-soft: #a7a39a;
+  --color-line: rgba(241, 239, 233, 0.16);
+  --color-accent: #c9c4b6;
+
+  /* landing/flag colors are meaningless until a destination is selected;
+     Japan's values are a harmless fallback for the "no destination" state */
+  --color-landing-bg: #f7f6f2;
+  --color-landing-ink: #161512;
+  --color-landing-soft: #8c887c;
+  --color-flag-accent: #c23b2b;
+}
+
+[data-dest='japan'] {
+  --color-bg: #120d0d;
+  --color-accent: #a8402f;
+  --color-landing-bg: #f7f6f2;
+  --color-landing-ink: #161512;
+  --color-landing-soft: #8c887c;
+  --color-flag-accent: #c23b2b;
+}
+
+[data-dest='iceland'] {
+  --color-bg: #0a0f12;
+  --color-accent: #5f93a0;
+  --color-landing-bg: #003897;
+  --color-landing-ink: #ffffff;
+  --color-landing-soft: #a9bfe6;
+  --color-flag-accent: #d72828;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+@keyframes rise-fade {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---- bespoke visual effects (not expressible as clean Tailwind utilities) ---- */
+
+.grain-overlay {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.35;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+
+.vlabel {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+.hero-photo-mask {
+  mask-image: radial-gradient(ellipse 62% 68% at 55% 45%, black 58%, transparent 92%);
+  -webkit-mask-image: radial-gradient(ellipse 62% 68% at 55% 45%, black 58%, transparent 92%);
+}
+
+/* Japan — hinomaru circle portal */
+.portal-circle {
+  border-radius: 50%;
+}
+
+/* Iceland — Nordic cross portal, offset toward the hoist, official 18:25 flag proportions */
+.portal-cross-white {
+  clip-path: polygon(
+    24% 0%, 48% 0%, 48% 27.5%, 100% 27.5%, 100% 61%, 48% 61%, 48% 100%,
+    24% 100%, 24% 61%, 0% 61%, 0% 27.5%, 24% 27.5%
+  );
+}
+.portal-cross-inner {
+  clip-path: polygon(
+    28% 0%, 44% 0%, 44% 33%, 100% 33%, 100% 56%, 44% 56%, 44% 100%,
+    28% 100%, 28% 56%, 0% 56%, 0% 33%, 28% 33%
+  );
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.7s cubic-bezier(0.2, 0.7, 0.3, 1), transform 0.7s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.reveal.in-view {
+  opacity: 1;
+  transform: translateY(0);
+}
