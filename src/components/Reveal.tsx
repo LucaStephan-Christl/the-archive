@@ -1,41 +1,27 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { motion } from "framer-motion";
+import type { ReactNode } from "react";
+
+const EASE = [0.2, 0.7, 0.3, 1] as const;
 
 /** Fades + rises its children in once they scroll into view; fires once. */
 export default function Reveal({
   children,
-  className = '',
+  className = "",
   delay = 0,
 }: {
-  children: ReactNode
-  className?: string
-  delay?: number
+  children: ReactNode;
+  className?: string;
+  delay?: number;
 }) {
-  const ref = useRef<HTMLDivElement>(null)
-  const [inView, setInView] = useState(false)
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    let timeoutId: number
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          timeoutId = window.setTimeout(() => setInView(true), delay)
-          io.unobserve(el)
-        }
-      },
-      { threshold: 0.15 },
-    )
-    io.observe(el)
-    return () => {
-      io.disconnect()
-      window.clearTimeout(timeoutId)
-    }
-  }, [delay])
-
   return (
-    <div ref={ref} className={`reveal ${inView ? 'in-view' : ''} ${className}`}>
+    <motion.div
+      className={className}
+      initial={{ opacity: 0, y: 28 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.15 }}
+      transition={{ duration: 0.7, ease: EASE, delay: delay / 1000 }}
+    >
       {children}
-    </div>
-  )
+    </motion.div>
+  );
 }

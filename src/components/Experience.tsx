@@ -1,73 +1,91 @@
-import { useEffect, useRef } from 'react'
-import Lenis from 'lenis'
-import GrainOverlay from './GrainOverlay'
-import Reveal from './Reveal'
-import type { Destination } from '../data/trips'
+import { useEffect, useRef } from "react";
+import Lenis from "lenis";
+import Reveal from "./Reveal";
+import type { Destination } from "../data/trips";
 
 interface ExperienceProps {
-  destination: Destination
-  active: boolean
-  onBack: () => void
+  destination: Destination;
+  active: boolean;
+  onBack: () => void;
 }
 
 /** The post-portal view: a scroll-driven timeline whose days each unfold into a small grid. */
-export default function Experience({ destination, active, onBack }: ExperienceProps) {
-  const wrapperRef = useRef<HTMLDivElement>(null)
-  const contentRef = useRef<HTMLDivElement>(null)
+export default function Experience({
+  destination,
+  active,
+  onBack,
+}: ExperienceProps) {
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!active) return
-    const wrapper = wrapperRef.current
-    const content = contentRef.current
-    if (!wrapper || !content) return
+    if (!active) return;
+    const wrapper = wrapperRef.current;
+    const content = contentRef.current;
+    if (!wrapper || !content) return;
 
-    wrapper.scrollTop = 0
-    const lenis = new Lenis({ wrapper, content })
+    wrapper.scrollTop = 0;
+    const lenis = new Lenis({
+      wrapper,
+      content,
+      duration: 1.2,
+      easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      smoothWheel: true,
+    });
     let rafId = requestAnimationFrame(function raf(time) {
-      lenis.raf(time)
-      rafId = requestAnimationFrame(raf)
-    })
+      lenis.raf(time);
+      rafId = requestAnimationFrame(raf);
+    });
     return () => {
-      cancelAnimationFrame(rafId)
-      lenis.destroy()
-    }
-  }, [active])
+      cancelAnimationFrame(rafId);
+      lenis.destroy();
+    };
+  }, [active]);
 
   return (
     <section
-      className={`absolute inset-0 z-10 overflow-y-auto bg-(--color-bg) text-[#f1efe9] transition-opacity duration-500 delay-[350ms] ${
-        active ? 'opacity-100 pointer-events-auto' : 'pointer-events-none opacity-0'
+      className={`absolute inset-0 z-10 overflow-y-auto bg-(--color-bg) text-(--color-text) transition-opacity duration-500 delay-[350ms] ${
+        active
+          ? "opacity-100 pointer-events-auto"
+          : "pointer-events-none opacity-0"
       }`}
       ref={wrapperRef}
     >
       <div className="relative" ref={contentRef}>
-        <GrainOverlay />
         <div className="sticky top-0 z-10 flex items-center justify-between bg-gradient-to-b from-(--color-bg) via-(--color-bg)/85 to-transparent px-8 py-5">
           <button
             type="button"
             onClick={onBack}
-            className="inline-flex items-center gap-1.5 border-none bg-transparent p-0 text-[0.74rem] tracking-wide text-[#a7a39a] hover:text-[#f1efe9]"
+            className="inline-flex items-center gap-1.5 border-none bg-transparent p-0 text-[0.74rem] tracking-wide text-(--color-text-soft) hover:text-(--color-text)"
           >
             ← All destinations
           </button>
-          <span className="font-display text-base font-semibold tracking-tight">The Archive</span>
+          <span className="font-display text-base font-semibold tracking-tight">
+            The Archive
+          </span>
         </div>
 
         <div className="px-8 pt-4 pb-8">
-          <p className="mb-3 text-[0.72rem] tracking-[0.16em] uppercase text-(--color-accent)">{destination.eyebrow}</p>
+          <p className="mb-3 text-[0.72rem] tracking-[0.16em] uppercase text-(--color-accent)">
+            {destination.eyebrow}
+          </p>
           <h1 className="font-display text-[clamp(2rem,6.5vw,4.6rem)] leading-[0.92] font-semibold tracking-[-0.03em] uppercase">
             {destination.headline}
           </h1>
         </div>
 
         <div className="relative px-8 pb-20">
-          <div className="pointer-events-none absolute top-0 bottom-8 left-[2.65rem] w-px bg-[#f1efe9]/15" />
+          <div className="pointer-events-none absolute top-0 bottom-8 left-[2.65rem] w-px bg-(--color-text)/15" />
           {destination.days.map((day) => (
             <div key={day.n} className="relative pt-9 pl-10">
               <span className="absolute top-9 left-[-0.6rem] h-2.5 w-2.5 rounded-full bg-(--color-accent)" />
               <Reveal className="mb-4 flex items-baseline gap-3">
-                <span className="font-display text-lg font-semibold">{day.n}</span>
-                <span className="text-[0.74rem] tracking-[0.08em] uppercase text-[#a7a39a]">{day.label}</span>
+                <span className="font-display text-lg font-semibold">
+                  {day.n}
+                </span>
+                <span className="text-[0.74rem] tracking-[0.08em] uppercase text-(--color-text-soft)">
+                  {day.label}
+                </span>
               </Reveal>
               <div className="grid grid-cols-4 gap-3 max-[700px]:grid-cols-2">
                 {day.tiles.map((tile, i) => (
@@ -75,10 +93,13 @@ export default function Experience({ destination, active, onBack }: ExperiencePr
                     key={i}
                     delay={(i % 4) * 60}
                     className={`rounded-[3px] grayscale-[0.4] aspect-[3/4] ${
-                      tile.wide ? 'col-span-2 aspect-[16/10]' : ''
+                      tile.wide ? "col-span-2 aspect-[16/10]" : ""
                     }`}
                   >
-                    <div className="h-full w-full rounded-[3px]" style={{ background: tile.bg }} />
+                    <div
+                      className="h-full w-full rounded-[3px]"
+                      style={{ background: tile.bg }}
+                    />
                   </Reveal>
                 ))}
               </div>
@@ -87,5 +108,5 @@ export default function Experience({ destination, active, onBack }: ExperiencePr
         </div>
       </div>
     </section>
-  )
+  );
 }
