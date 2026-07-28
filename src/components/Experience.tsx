@@ -92,12 +92,12 @@ export default function Experience({
                   <Reveal
                     key={i}
                     delay={(i % 4) * 60}
-                    className={`rounded-[3px] grayscale-[0.4] aspect-[3/4] ${
+                    className={`rounded-(--radius) grayscale-[0.4] aspect-[3/4] ${
                       tile.wide ? "col-span-2 aspect-[16/10]" : ""
                     }`}
                   >
                     <div
-                      className="h-full w-full rounded-[3px]"
+                      className="h-full w-full rounded-(--radius)"
                       style={{ background: tile.bg }}
                     />
                   </Reveal>

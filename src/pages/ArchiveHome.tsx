@@ -26,7 +26,7 @@ export default function ArchiveHome() {
           <Reveal key={destination.slug} delay={i * 90}>
             <Link
               to={`/${destination.slug}`}
-              className="group relative block overflow-hidden rounded-md aspect-[4/3]"
+              className="group relative block overflow-hidden rounded-(--radius) aspect-[4/3]"
             >
               <div
                 className="absolute inset-0 transition-transform duration-500 ease-out group-hover:scale-105"
@@ -60,10 +60,10 @@ export default function ArchiveHome() {
           <Reveal
             key={tile.caption}
             delay={(i % 4) * 70}
-            className={`relative overflow-hidden rounded-[3px] aspect-[3/4] ${tile.wide ? "col-span-2 aspect-[16/10]" : ""}`}
+            className={`relative overflow-hidden rounded-(--radius) aspect-[3/4] ${tile.wide ? "col-span-2 aspect-[16/10]" : ""}`}
           >
             <div className="absolute inset-0" style={{ background: tile.bg }} />
-            <span className="absolute bottom-2.5 left-2.5 z-10 rounded-[3px] bg-black/32 px-2.5 py-1.5 text-[0.72rem] text-white backdrop-blur-md backdrop-saturate-150">
+            <span className="absolute bottom-2.5 left-2.5 z-10 rounded-(--radius) bg-black/32 px-2.5 py-1.5 text-[0.72rem] text-white backdrop-blur-md backdrop-saturate-150">
               {tile.caption}
             </span>
           </Reveal>

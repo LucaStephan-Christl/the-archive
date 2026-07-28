@@ -3,9 +3,12 @@ import { motion, useScroll, useTransform } from "framer-motion";
 
 const EMAIL = "luca.christl4221@gmail.com";
 const SOCIALS = [
-  { label: "LinkedIn", href: "#" },
-  { label: "GitHub", href: "#" },
-  { label: "Instagram", href: "#" },
+  {
+    label: "LinkedIn",
+    href: "https://www.linkedin.com/in/luca-christl-36a783308/",
+  },
+  { label: "GitHub", href: "https://github.com/LucaStephan-Christl" },
+  { label: "Instagram", href: "https://www.instagram.com/luca.christl01/" },
 ];
 
 function useZurichClock() {
@@ -89,7 +92,7 @@ export default function Footer() {
       <div className="sticky top-0 h-screen overflow-hidden">
         <motion.div
           style={{ clipPath }}
-          className="absolute inset-0 bg-[radial-gradient(120%_90%_at_50%_100%,#241c14_0%,#0d0908_55%,#000_100%)]"
+          className="absolute inset-0 bg-[radial-gradient(120%_90%_at_50%_100%,#2c2d2f_0%,var(--color-bg)_55%,#000_100%)]"
         >
           <motion.div
             style={{ opacity: contentOpacity }}
@@ -137,6 +140,7 @@ export default function Footer() {
               <nav className="mb-2 hidden gap-8 text-[0.78rem] font-semibold tracking-wide text-(--color-text)/80 uppercase sm:flex">
                 {SOCIALS.map((s) => (
                   <a
+                    target="_blank"
                     key={s.label}
                     href={s.href}
                     className="hover:text-(--color-text)"

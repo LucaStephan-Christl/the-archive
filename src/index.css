@@ -52,6 +52,10 @@
   --color-landing-ink: #161512;
   --color-landing-soft: #8c887c;
   --color-flag-accent: #c23b2b;
+
+  /* the one corner radius for every photo/card container on the site —
+     the Hero frame, grid tiles, and destination cards all share it */
+  --radius: 16px;
 }
 
 [data-dest="japan"] {
@@ -120,19 +124,6 @@ body {
 .vlabel {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
-}
-
-.hero-photo-mask {
-  mask-image: radial-gradient(
-    ellipse 62% 68% at 55% 45%,
-    black 58%,
-    transparent 92%
-  );
-  -webkit-mask-image: radial-gradient(
-    ellipse 62% 68% at 55% 45%,
-    black 58%,
-    transparent 92%
-  );
 }
 
 /* Japan — hinomaru circle portal */
