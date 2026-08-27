@@ -30,7 +30,7 @@ export default function ArchiveHome() {
             >
               <div
                 className="absolute inset-0 transition-transform duration-500 ease-out group-hover:scale-105"
-                style={{ background: destination.portalBg }}
+                style={{ background: destination.heroBg }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/5 to-transparent" />
               <div className="absolute bottom-0 left-0 p-5">

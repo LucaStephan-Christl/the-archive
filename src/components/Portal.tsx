@@ -1,65 +1,94 @@
-import { motion } from "framer-motion";
+import { motion, useTransform, type MotionValue } from "framer-motion";
 import type { DestinationKind } from "../data/trips";
 
-const EASE_IN = [0.6, 0, 0.2, 1] as const;
-const EASE_OUT = [0.2, 0.7, 0.3, 1] as const;
+const ICELAND_BLUE = "#00308f";
+
+// The sticky pin (see Destination.tsx) only lasts the first 2/3 of scroll
+// progress — past that the wrapper starts sliding away regardless of what
+// this animation is doing. The reveal must land exactly at that point with
+// zero velocity, or it visibly snaps right as the slide-away begins.
+const REVEAL_END = 0.667;
+
+function easedProgress(p: number) {
+  const t = Math.min(Math.max(p / REVEAL_END, 0), 1);
+  return 1 - Math.pow(1 - t, 3); // cubic ease-out: reaches 1 with zero slope
+}
 
 interface PortalProps {
   kind: DestinationKind;
-  background: string;
-  zooming: boolean;
-  onEnter: () => void;
+  scrollYProgress: MotionValue<number>;
+  reduceMotion: boolean;
 }
 
 /**
  * The flag-homage portal: Japan gets the hinomaru circle, Iceland the
  * Nordic cross (offset toward the hoist, official 18:25 proportions).
- * The shape is a mask over a photo/video — clicking zooms it fullscreen.
+ * Both render as a full-viewport field of flag colour with a shape-shaped
+ * hole in it — a window onto the real page underneath. Scrolling grows that
+ * hole (the mask radius for Japan, shrinking corner tiles for Iceland)
+ * directly, rather than scaling the whole layer — a large `transform:
+ * scale()` combined with `mask-image` is unreliable across browsers and can
+ * drop the mask entirely, flashing the layer's own flat colour.
  */
 export default function Portal({
   kind,
-  background,
-  zooming,
-  onEnter,
+  scrollYProgress,
+  reduceMotion,
 }: PortalProps) {
-  const shapeClass = kind === "circle" ? "portal-circle" : "portal-cross-inner";
+  const holeVmin = useTransform(scrollYProgress, (p) =>
+    reduceMotion ? 150 : 20 + easedProgress(p) * 130,
+  );
+  // Two explicit stops only — no trailing "white 100%" marker. Mixing that
+  // with absolute vmin lengths that can exceed the box's own 100% (its
+  // farthest-corner distance, which varies by aspect ratio) forces the
+  // browser to reorder/clamp the stops, which can render as a torn or
+  // partially-updated frame. A radial-gradient simply extends its last
+  // colour outward past the final stop, so this isn't needed anyway.
+  const circleMask = useTransform(
+    holeVmin,
+    (r) =>
+      `radial-gradient(circle at 50% 50%, transparent 0, transparent ${r}vmin, white ${r + 0.6}vmin)`,
+  );
+
+  const cornerScale = useTransform(scrollYProgress, (p) =>
+    reduceMotion ? 0 : 1 - easedProgress(p),
+  );
+  const tlWidth = useTransform(cornerScale, (s) => `${24 * s}%`);
+  const tlHeight = useTransform(cornerScale, (s) => `${27.5 * s}%`);
+  const trWidth = useTransform(cornerScale, (s) => `${52 * s}%`);
+  const trHeight = useTransform(cornerScale, (s) => `${27.5 * s}%`);
+  const blWidth = useTransform(cornerScale, (s) => `${24 * s}%`);
+  const blHeight = useTransform(cornerScale, (s) => `${39 * s}%`);
+  const brWidth = useTransform(cornerScale, (s) => `${52 * s}%`);
+  const brHeight = useTransform(cornerScale, (s) => `${39 * s}%`);
 
   return (
-    <motion.div
-      className="relative h-[min(38vw,460px)] w-[min(38vw,460px)]"
-      initial={{ opacity: 0, y: 22 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.8, ease: EASE_OUT, delay: 0.25 }}
-    >
-      <motion.button
-        type="button"
-        onClick={onEnter}
-        aria-label={`Enter the ${kind === "circle" ? "Japan" : "Iceland"} archive`}
-        className="absolute inset-0 cursor-pointer overflow-hidden border-none bg-transparent p-0"
-        whileHover={{ scale: 1.025 }}
-        transition={{ duration: 0.5, ease: EASE_OUT }}
-      >
-        {kind === "cross" && (
-          <span className="portal-cross-white absolute inset-0 bg-white" />
-        )}
-        <motion.span
-          className={`absolute inset-0 bg-cover bg-center ${shapeClass}`}
-          style={{ background }}
-          animate={
-            zooming
-              ? { scale: 26, filter: "brightness(1.12) saturate(1.1)" }
-              : { scale: 1, filter: "brightness(1) saturate(1)" }
-          }
-          transition={{ duration: 1.15, ease: EASE_IN }}
+    <div className="absolute inset-0" aria-hidden="true">
+      {kind === "circle" ? (
+        <motion.div
+          className="absolute inset-0 bg-white"
+          style={{ maskImage: circleMask, WebkitMaskImage: circleMask }}
         />
-      </motion.button>
-      <motion.span
-        className="absolute -bottom-9 left-1/2 -translate-x-1/2 text-[0.68rem] tracking-[0.14em] whitespace-nowrap text-(--color-landing-soft) uppercase"
-        animate={{ opacity: zooming ? 0 : 1 }}
-        transition={{ duration: 0.3 }}
-      >
-        click to enter
-      </motion.span>
-    </motion.div>
+      ) : (
+        <>
+          <motion.div
+            className="absolute top-0 left-0"
+            style={{ width: tlWidth, height: tlHeight, background: ICELAND_BLUE }}
+          />
+          <motion.div
+            className="absolute top-0 right-0"
+            style={{ width: trWidth, height: trHeight, background: ICELAND_BLUE }}
+          />
+          <motion.div
+            className="absolute bottom-0 left-0"
+            style={{ width: blWidth, height: blHeight, background: ICELAND_BLUE }}
+          />
+          <motion.div
+            className="absolute bottom-0 right-0"
+            style={{ width: brWidth, height: brHeight, background: ICELAND_BLUE }}
+          />
+        </>
+      )}
+    </div>
   );
 }

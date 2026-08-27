@@ -17,6 +17,7 @@ export interface Destination {
   vTop: string;
   vBottom: string;
   portalBg: string;
+  heroBg: string;
   eyebrow: string;
   headline: string;
   days: DaySection[];
@@ -30,6 +31,8 @@ export const destinations: Record<"japan" | "iceland", Destination> = {
     vBottom: "TOKYO / KYOTO / OSAKA",
     portalBg:
       "radial-gradient(circle at 32% 30%, #e0563a 0%, #7a2418 40%, #1a0e0c 78%)",
+    heroBg:
+      "radial-gradient(120% 90% at 70% 20%, #f2a35c 0%, #d6552f 32%, #7a2418 62%, #1a0e0c 100%)",
     eyebrow: "Japan, Oct 2024",
     headline: "Kyoto to Nara.",
     days: [
@@ -60,6 +63,8 @@ export const destinations: Record<"japan" | "iceland", Destination> = {
     vBottom: "REYKJAVIK / VIK / JOKULSARLON",
     portalBg:
       "radial-gradient(circle at 32% 30%, #6fb0c2 0%, #29616e 40%, #0a1518 78%)",
+    heroBg:
+      "radial-gradient(120% 90% at 70% 20%, #a9dce7 0%, #5fa3b8 32%, #29616e 62%, #0a1518 100%)",
     eyebrow: "Iceland, Feb 2025",
     headline: "Ice, ash and water.",
     days: [

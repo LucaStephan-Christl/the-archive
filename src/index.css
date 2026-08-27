@@ -126,41 +126,8 @@ body {
   transform: rotate(180deg);
 }
 
-/* Japan — hinomaru circle portal */
-.portal-circle {
-  border-radius: 50%;
-}
-
-/* Iceland — Nordic cross portal, offset toward the hoist, official 18:25 flag proportions */
-.portal-cross-white {
-  clip-path: polygon(
-    24% 0%,
-    48% 0%,
-    48% 27.5%,
-    100% 27.5%,
-    100% 61%,
-    48% 61%,
-    48% 100%,
-    24% 100%,
-    24% 61%,
-    0% 61%,
-    0% 27.5%,
-    24% 27.5%
-  );
-}
-.portal-cross-inner {
-  clip-path: polygon(
-    28% 0%,
-    44% 0%,
-    44% 33%,
-    100% 33%,
-    100% 56%,
-    44% 56%,
-    44% 100%,
-    28% 100%,
-    28% 56%,
-    0% 56%,
-    0% 33%,
-    28% 33%
-  );
-}
+/*
+ * The Japan (circle) and Iceland (cross) portal shapes are driven entirely
+ * by inline motion-value styles in Portal.tsx (mask radius / corner tile
+ * size), so no static CSS is needed for them here.
+ */

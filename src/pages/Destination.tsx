@@ -1,19 +1,30 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import Portal from "../components/Portal";
 import Experience from "../components/Experience";
 import { destinations } from "../data/trips";
-
-const EASE_OUT = [0.2, 0.7, 0.3, 1] as const;
 
 export default function Destination() {
   const { slug } = useParams<{ slug: string }>();
   const destination = slug === "japan" || slug === "iceland" ? destinations[slug] : undefined;
 
-  const [zooming, setZooming] = useState(false);
-  const [landingLeaving, setLandingLeaving] = useState(false);
-  const [experienceActive, setExperienceActive] = useState(false);
+  const portalWrapperRef = useRef<HTMLDivElement>(null);
+  const reduceMotion = useReducedMotion();
+  const { scrollYProgress } = useScroll({
+    target: portalWrapperRef,
+    offset: ["start start", "end start"],
+  });
+  const labelOpacity = useTransform(
+    scrollYProgress,
+    [0, 0.15],
+    reduceMotion ? [0, 0] : [1, 0],
+  );
+  const heroScale = useTransform(
+    scrollYProgress,
+    [0, 1],
+    reduceMotion ? [1, 1] : [1.15, 1],
+  );
 
   useEffect(() => {
     if (!destination) return;
@@ -25,59 +36,59 @@ export default function Destination() {
 
   if (!destination) return <Navigate to="/" replace />;
 
-  function handleEnter() {
-    setZooming(true);
-    setTimeout(() => setLandingLeaving(true), 550);
-    setTimeout(() => setExperienceActive(true), 750);
-  }
-
-  function handleBack() {
-    setExperienceActive(false);
-    setZooming(false);
-    setLandingLeaving(false);
-  }
-
   return (
-    <div className="relative h-screen min-h-[640px] overflow-hidden">
-      <motion.section
-        className={`flex h-full items-center justify-center bg-(--color-landing-bg) text-(--color-landing-ink) ${zooming ? "pointer-events-none" : ""}`}
-        animate={{ opacity: landingLeaving ? 0 : 1 }}
-        transition={{ duration: 0.4, ease: EASE_OUT, delay: landingLeaving ? 0.55 : 0 }}
+    <div>
+      <div
+        ref={portalWrapperRef}
+        className={`relative w-full ${reduceMotion ? "h-screen" : "h-[300vh]"}`}
       >
-        <motion.span
-          className="vlabel absolute top-7 left-7 text-[0.78rem] font-medium tracking-[0.1em] uppercase"
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: zooming ? 0 : 1, y: 0 }}
-          transition={{ duration: 0.7, ease: EASE_OUT, delay: 0.05 }}
-        >
-          {destination.vTop}
-        </motion.span>
-        <motion.span
-          className="vlabel absolute bottom-7 left-7 text-[0.78rem] font-medium tracking-[0.1em] uppercase"
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: zooming ? 0 : 1, y: 0 }}
-          transition={{ duration: 0.7, ease: EASE_OUT, delay: 0.15 }}
-        >
-          {destination.vBottom}
-        </motion.span>
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: zooming ? 0 : 1 }}
-          transition={{ duration: 0.6 }}
-          className="absolute top-7 right-7"
-        >
-          <Link
-            to="/"
-            className="text-[0.74rem] tracking-wide text-(--color-landing-soft) hover:text-(--color-landing-ink)"
+        <div className="sticky top-0 h-screen w-full overflow-hidden">
+          <motion.div
+            className="absolute inset-0"
+            style={{ scale: heroScale, background: destination.heroBg }}
+          />
+
+          <Portal
+            kind={destination.kind}
+            scrollYProgress={scrollYProgress}
+            reduceMotion={!!reduceMotion}
+          />
+
+          <motion.span
+            className="vlabel absolute top-7 left-7 text-[0.78rem] font-medium tracking-[0.1em] uppercase"
+            style={{ opacity: labelOpacity }}
           >
-            ← The Archive
-          </Link>
-        </motion.div>
+            {destination.vTop}
+          </motion.span>
+          <motion.span
+            className="vlabel absolute bottom-7 left-7 text-[0.78rem] font-medium tracking-[0.1em] uppercase"
+            style={{ opacity: labelOpacity }}
+          >
+            {destination.vBottom}
+          </motion.span>
+          <motion.div
+            className="absolute top-7 right-7"
+            style={{ opacity: labelOpacity }}
+          >
+            <Link
+              to="/"
+              className="text-[0.74rem] tracking-wide text-(--color-landing-soft) hover:text-(--color-landing-ink)"
+            >
+              ← The Archive
+            </Link>
+          </motion.div>
 
-        <Portal kind={destination.kind} background={destination.portalBg} zooming={zooming} onEnter={handleEnter} />
-      </motion.section>
+          <motion.div
+            className="absolute bottom-9 left-1/2 z-50 flex -translate-x-1/2 flex-col items-center gap-2.5 text-[0.65rem] tracking-[0.16em] text-(--color-landing-soft) uppercase"
+            style={{ opacity: labelOpacity }}
+          >
+            <span>Scroll</span>
+            <span className="h-8 w-px animate-pulse bg-(--color-landing-soft)" />
+          </motion.div>
+        </div>
+      </div>
 
-      <Experience destination={destination} active={experienceActive} onBack={handleBack} />
+      <Experience destination={destination} />
     </div>
   );
 }
