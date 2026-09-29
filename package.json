@@ -7,10 +7,13 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
+    "media": "node scripts/media.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource/noto-serif-jp": "^5.3.0",
     "framer-motion": "^12.42.2",
+    "leaflet": "^1.9.4",
     "lenis": "^1.3.25",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
@@ -18,11 +21,15 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
+    "@types/leaflet": "^1.9.22",
     "@types/node": "^24.13.2",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
+    "exifr": "^7.1.3",
+    "ffmpeg-static": "^5.3.0",
     "oxlint": "^1.71.0",
+    "sharp": "^0.35.4",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
     "vite": "^8.1.1"

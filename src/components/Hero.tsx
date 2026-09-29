@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } from 'framer-motion'
-import landscape from '../assets/images/hero/landscape.webp'
+import landscape from '../assets/images/hero/hero_new.jpeg'
 
 const EASE = [0.16, 1, 0.3, 1] as const
 const CURTAIN_EASE = [0.87, 0, 0.13, 1] as const

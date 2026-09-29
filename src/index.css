@@ -32,6 +32,8 @@
 @theme {
   --font-display: "Clash Display", ui-sans-serif, sans-serif;
   --font-sans: "Inter", -apple-system, sans-serif;
+  /* local-script names (日本, 伏見稲荷大社, Ísland) */
+  --font-jp: "Noto Serif JP", "Hiragino Mincho ProN", "Yu Mincho", serif;
 }
 
 /*
@@ -124,6 +126,99 @@ body {
 .vlabel {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
+}
+
+/* Japanese vertical writing (tategaki): top-to-bottom, upright, unrotated —
+   unlike .vlabel, which turns Latin text on its side */
+.tategaki {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+
+/* ---- trip map (TripMap.tsx, Leaflet) ---- */
+
+/* !important: leaflet.css is lazy-loaded with the map, i.e. after this file,
+   and would otherwise win with its light-grey background */
+.leaflet-container {
+  background: var(--color-bg) !important;
+  font-family: var(--font-sans) !important;
+}
+
+.trip-pin {
+  position: relative;
+}
+.trip-pin__img {
+  display: block;
+  width: 46px;
+  height: 46px;
+  border: 2px solid;
+  border-radius: 50%;
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
+  transition: transform 0.25s ease;
+}
+.trip-pin:hover .trip-pin__img {
+  transform: scale(1.12);
+}
+.trip-pin__count {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  min-width: 18px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--color-text);
+  color: var(--color-bg);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 16px;
+  text-align: center;
+}
+
+.leaflet-tooltip.trip-tooltip {
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-bg) 85%, transparent);
+  color: var(--color-text);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  padding: 4px 10px;
+  box-shadow: none;
+  backdrop-filter: blur(8px);
+}
+.trip-tooltip__ja {
+  font-family: var(--font-jp);
+  color: var(--color-text-soft);
+  margin-left: 2px;
+}
+.leaflet-tooltip.trip-tooltip::before {
+  display: none;
+}
+
+.leaflet-bar {
+  border: 1px solid var(--color-line) !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+  box-shadow: none !important;
+}
+.leaflet-bar a {
+  background: color-mix(in srgb, var(--color-bg) 80%, transparent) !important;
+  color: var(--color-text) !important;
+  border-bottom-color: var(--color-line) !important;
+  backdrop-filter: blur(8px);
+}
+.leaflet-bar a:hover {
+  background: var(--color-text) !important;
+  color: var(--color-bg) !important;
+}
+.leaflet-control-attribution {
+  background: color-mix(in srgb, var(--color-bg) 70%, transparent) !important;
+  color: var(--color-text-soft) !important;
+  font-size: 9px;
+}
+.leaflet-control-attribution a {
+  color: var(--color-text-soft) !important;
 }
 
 /*

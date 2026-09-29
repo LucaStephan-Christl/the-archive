@@ -3,6 +3,7 @@ import { animate, motion, useMotionValue } from 'framer-motion'
 import { Route, Routes, useLocation } from 'react-router-dom'
 import Lenis from 'lenis'
 import CustomCursor from './components/CustomCursor'
+import { setCursorState } from './lib/cursorStore'
 import ArchiveHome from './pages/ArchiveHome'
 import Destination from './pages/Destination'
 
@@ -52,6 +53,10 @@ export default function App() {
   useEffect(() => {
     if (location.pathname === displayLocationRef.current.pathname) return
     let cancelled = false
+    // The hovered row that set a cursor preview is about to unmount without
+    // ever firing mouseleave — drop the preview so it doesn't follow you
+    // onto the next page.
+    setCursorState(null)
 
     async function transition() {
       await Promise.all([

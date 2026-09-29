@@ -9,6 +9,9 @@ lerna-debug.log*
 
 node_modules
 dist
+
+# raw trip originals — `yarn media` turns these into public/media + src/data/media
+/media/
 dist-ssr
 *.local
 

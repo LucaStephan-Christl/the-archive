@@ -44,10 +44,10 @@ export default function Portal({
   // browser to reorder/clamp the stops, which can render as a torn or
   // partially-updated frame. A radial-gradient simply extends its last
   // colour outward past the final stop, so this isn't needed anyway.
+  // Both stops sit at the same radius — a hard edge, no soft/blurred ring.
   const circleMask = useTransform(
     holeVmin,
-    (r) =>
-      `radial-gradient(circle at 50% 50%, transparent 0, transparent ${r}vmin, white ${r + 0.6}vmin)`,
+    (r) => `radial-gradient(circle at 50% 50%, transparent ${r}vmin, white ${r}vmin)`,
   );
 
   const cornerScale = useTransform(scrollYProgress, (p) =>
