@@ -4,11 +4,12 @@ import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion
 import Portal from "../components/Portal";
 import Experience from "../components/Experience";
 import Footer from "../components/Footer";
-import { destinations } from "../data/trips";
+import { destinations, type Destination as Trip } from "../data/trips";
 
 export default function Destination() {
   const { slug } = useParams<{ slug: string }>();
-  const destination = slug === "japan" || slug === "iceland" ? destinations[slug] : undefined;
+  const destination =
+    slug && Object.hasOwn(destinations, slug) ? destinations[slug as Trip["slug"]] : undefined;
 
   const portalWrapperRef = useRef<HTMLDivElement>(null);
   const reduceMotion = useReducedMotion();
@@ -60,22 +61,24 @@ export default function Destination() {
                 {destination.heroFit === "contain" && (
                   <div
                     aria-hidden="true"
-                    className="pointer-events-none absolute inset-0 opacity-25"
+                    className="pointer-events-none absolute inset-0 hidden opacity-25 landscape:block"
                     style={{
                       background: `radial-gradient(ellipse 60% 90% at 50% 50%, ${destination.accent} 0%, transparent 100%)`,
                     }}
                   />
                 )}
                 {/* heroBg (the poster frame) sits behind the video with the
-                    same fit, so it shows instead of black until playback starts */}
+                    same fit, so it shows instead of black until playback starts.
+                    "contain" (portrait clip, letterboxed on wide screens) turns
+                    into cover on portrait screens — a portrait clip on a phone
+                    fills it naturally instead of leaving bands top and bottom. */}
                 <video
-                  className="absolute inset-0 h-full w-full bg-center bg-no-repeat"
-                  style={{
-                    objectFit: destination.heroFit,
-                    objectPosition: "center",
-                    backgroundImage: destination.heroBg,
-                    backgroundSize: destination.heroFit,
-                  }}
+                  className={`absolute inset-0 h-full w-full bg-center bg-no-repeat object-center ${
+                    destination.heroFit === "contain"
+                      ? "bg-contain object-contain portrait:bg-cover portrait:object-cover"
+                      : "bg-cover object-cover"
+                  }`}
+                  style={{ backgroundImage: destination.heroBg }}
                   src={destination.heroVideo}
                   preload="auto"
                   autoPlay

@@ -12,6 +12,8 @@ export interface MediaItem {
   full?: string;
   /** still frame shown before a video plays (videos only) */
   poster?: string;
+  /** camera model from EXIF / QuickTime metadata, e.g. "DC-S9" */
+  camera?: string;
   /** small cropped preview (map markers, place panels) */
   thumb?: string;
   width: number;
@@ -106,6 +108,9 @@ export interface TripHero {
   poster: string;
   width: number;
   height: number;
+  /** small portrait cut for little frames (hover circle, globe card) — see ensureHeroPreview in scripts/media.mjs */
+  preview?: string;
+  previewPoster?: string;
 }
 
 interface Manifest {
@@ -168,6 +173,13 @@ const timeFormat = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "
 /** "2026-01-16" → "Jan 16" */
 export function formatDay(date: string) {
   return dayFormat.format(new Date(`${date}T00:00:00Z`));
+}
+
+const monthFormat = new Intl.DateTimeFormat("en-US", { month: "short", timeZone: "UTC" });
+
+/** "2026-01-16" → { day: "16", month: "Jan" } — for the timeline's big day number */
+export function dayParts(date: string) {
+  return { day: date.slice(8, 10), month: monthFormat.format(new Date(`${date}T00:00:00Z`)) };
 }
 
 /** "Jan 16 · 13:08" — just "Jan 16" when the time was only estimated */

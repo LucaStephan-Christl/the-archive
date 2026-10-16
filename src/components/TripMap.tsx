@@ -57,6 +57,11 @@ function stopDates(stop: Stop) {
   return [...new Set(stop.items.map((i) => formatDay(tripDay(i.takenAt))))].join(", ");
 }
 
+/** room around the route when fitting it — less on a phone, so the route isn't tiny */
+function fitPadding(el: HTMLElement): L.PointTuple {
+  return el.clientWidth < 640 ? [24, 24] : [48, 48];
+}
+
 interface TripMapProps {
   items: MediaItem[];
   accent: string;
@@ -73,11 +78,18 @@ export default function TripMap({ items, accent, onOpen }: TripMapProps) {
     const el = containerRef.current;
     if (!el || !stops.length) return;
 
+    const narrow = el.clientWidth < 640;
     const map = L.map(el, {
       zoomControl: false,
       // Scroll-to-zoom only after a click, so scrolling the page past the
       // map doesn't get hijacked into zooming it.
       scrollWheelZoom: false,
+      // On touch screens a one-finger swipe scrolls the page instead of
+      // dragging the map (pinch still zooms, tapping a pin still opens it).
+      dragging: !L.Browser.mobile,
+      // fractional zoom, so "fit the route" fills the frame instead of
+      // snapping a whole level smaller — matters most on a narrow phone map
+      zoomSnap: 0.25,
       attributionControl: true,
     });
     mapRef.current = map;
@@ -127,21 +139,22 @@ export default function TripMap({ items, accent, onOpen }: TripMapProps) {
       }).addTo(map);
     }
 
-    // one photo marker per stop
+    // one photo marker per stop (smaller on a phone, where they'd overlap)
+    const pin = narrow ? 32 : 46;
     for (const stop of stops) {
       const cover = stop.items.find((i) => i.type === "image") ?? stop.items[0];
       const icon = L.divIcon({
         className: "trip-pin",
-        html: `<span class="trip-pin__img" style="background-image:url('${cover.thumb ?? cover.poster ?? cover.src}');border-color:${accent}"></span><span class="trip-pin__count">${stop.items.length}</span>`,
-        iconSize: [46, 46],
-        iconAnchor: [23, 23],
+        html: `<span class="trip-pin__img" style="width:${pin}px;height:${pin}px;background-image:url('${cover.thumb ?? cover.poster ?? cover.src}');border-color:${accent}"></span><span class="trip-pin__count">${stop.items.length}</span>`,
+        iconSize: [pin, pin],
+        iconAnchor: [pin / 2, pin / 2],
       });
       L.marker([stop.lat, stop.lon], { icon, title: stop.name, riseOnHover: true })
         .addTo(map)
         .bindTooltip(
           `${stop.name}${stop.ja ? ` <span lang="${stop.lang ?? "ja"}" class="trip-tooltip__ja">${stop.ja}</span>` : ""}` +
             `${stop.city && stop.city !== stop.name ? `, ${stop.city}` : ""} · ${stopDates(stop)}`,
-          { direction: "top", offset: [0, -26], className: "trip-tooltip" },
+          { direction: "top", offset: [0, -(pin / 2 + 3)], className: "trip-tooltip" },
         )
         .on("click", () => {
           setSelected(stop);
@@ -158,7 +171,7 @@ export default function TripMap({ items, accent, onOpen }: TripMapProps) {
     });
     const fit = () => {
       map.invalidateSize();
-      if (!touched) map.fitBounds(bounds, { padding: [48, 48], maxZoom: 13 });
+      if (!touched) map.fitBounds(bounds, { padding: fitPadding(el), maxZoom: 13 });
     };
     fit();
     const ro = new ResizeObserver(fit);
@@ -173,8 +186,9 @@ export default function TripMap({ items, accent, onOpen }: TripMapProps) {
 
   function showAll() {
     setSelected(null);
+    const el = containerRef.current;
     mapRef.current?.flyToBounds(L.latLngBounds(stops.map((s) => [s.lat, s.lon] as L.LatLngTuple)), {
-      padding: [48, 48],
+      padding: el ? fitPadding(el) : [48, 48],
       duration: 0.8,
     });
   }
@@ -182,7 +196,7 @@ export default function TripMap({ items, accent, onOpen }: TripMapProps) {
   if (!stops.length) return null;
 
   return (
-    <div className="relative isolate h-[72vh] min-h-[420px] overflow-hidden rounded-(--radius) border border-(--color-line)">
+    <div className="relative isolate h-[60vh] min-h-[380px] sm:h-[72vh] sm:min-h-[420px] overflow-hidden rounded-(--radius) border border-(--color-line)">
       <div ref={containerRef} className="h-full w-full bg-(--color-bg)" />
 
       <button

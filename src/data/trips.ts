@@ -1,13 +1,13 @@
-// Web encode of JapanHero.mov (2160×3840 source → 1440×2560, 60fps, CRF 21);
-// the poster is its first frame, shown while the video loads.
-import japanHero from "../assets/videos/japan/japan-hero-poster.webp";
-import japanHeroVideo from "../assets/videos/japan/japan-hero.mp4";
-import { getTripHero } from "./media";
+import { getTripHero, getTripMedia } from "./media";
 
-// Encoded by `yarn media` from media/iceland/hero/ — until a clip is there,
-// the page keeps its gradient hero.
+// Hero clips are encoded by `yarn media` from media/<trip>/hero/ (Japan and
+// Budapest: triptychs of three vertical clips; Iceland: a landscape montage).
+// Until a clip is there, a trip keeps its gradient hero.
+const japanHero = getTripHero("japan");
 const icelandHero = getTripHero("iceland");
-export type DestinationKind = "circle" | "cross";
+const budapestHero = getTripHero("budapest");
+/** Flag-portal shape: Japan's hinomaru, Iceland's Nordic cross, Hungary's tricolour. */
+export type DestinationKind = "circle" | "cross" | "stripes";
 
 export interface Tile {
   wide?: boolean;
@@ -21,7 +21,7 @@ export interface DaySection {
 }
 
 export interface Destination {
-  slug: "japan" | "iceland";
+  slug: "japan" | "iceland" | "budapest";
   kind: DestinationKind;
   vTop: string;
   vBottom: string;
@@ -30,6 +30,8 @@ export interface Destination {
   /** Optional video to use instead of heroBg for the destination hero and the
    * homepage hover-cursor preview — falls back to heroBg when unset. */
   heroVideo?: string;
+  /** Portrait cut of the hero for small frames — the hover-cursor circle and the globe card. */
+  preview?: { video: string; poster: string };
   /** object-fit / background-size for heroVideo / heroBg — "contain" for portrait media so it isn't cropped. */
   heroFit: "cover" | "contain";
   accent: string;
@@ -51,7 +53,7 @@ export interface Destination {
   days: DaySection[];
 }
 
-export const destinations: Record<"japan" | "iceland", Destination> = {
+export const destinations: Record<Destination["slug"], Destination> = {
   japan: {
     slug: "japan",
     kind: "circle",
@@ -59,9 +61,12 @@ export const destinations: Record<"japan" | "iceland", Destination> = {
     vBottom: "TOKYO / KYOTO / OSAKA",
     portalBg:
       "radial-gradient(circle at 32% 30%, #e0563a 0%, #7a2418 40%, #1a0e0c 78%)",
-    heroBg: `url(${japanHero})`,
-    heroVideo: japanHeroVideo,
-    heroFit: "contain",
+    heroBg: japanHero
+      ? `url(${japanHero.poster})`
+      : "radial-gradient(120% 90% at 30% 20%, #f0a58f 0%, #e0563a 30%, #7a2418 62%, #1a0e0c 100%)",
+    heroVideo: japanHero?.video,
+    preview: japanHero?.preview && japanHero.previewPoster ? { video: japanHero.preview, poster: japanHero.previewPoster } : undefined,
+    heroFit: japanHero && japanHero.height > japanHero.width ? "contain" : "cover",
     accent: "#e0563a",
     eyebrow: "Japan, Jan 2026",
     headline: "Tokyo to Osaka.",
@@ -105,6 +110,7 @@ export const destinations: Record<"japan" | "iceland", Destination> = {
       ? `url(${icelandHero.poster})`
       : "radial-gradient(120% 90% at 70% 20%, #a9dce7 0%, #5fa3b8 32%, #29616e 62%, #0a1518 100%)",
     heroVideo: icelandHero?.video,
+    preview: icelandHero?.preview && icelandHero.previewPoster ? { video: icelandHero.preview, poster: icelandHero.previewPoster } : undefined,
     // portrait clips letterbox (with the accent glow either side), landscape ones fill the frame
     heroFit: icelandHero && icelandHero.height > icelandHero.width ? "contain" : "cover",
     accent: "#5fa3b8",
@@ -139,8 +145,77 @@ export const destinations: Record<"japan" | "iceland", Destination> = {
       },
     ],
   },
+  budapest: {
+    slug: "budapest",
+    kind: "stripes",
+    vTop: "BUDAPEST 2025",
+    vBottom: "BUDA / PEST",
+    portalBg:
+      "radial-gradient(circle at 32% 30%, #d9b46a 0%, #8a6a35 40%, #15110b 78%)",
+    // hero: a triptych of three vertical clips (media/budapest/hero/budapest-triptych.mp4);
+    // phones crop to its middle panel. Gradient is the fallback without it.
+    heroBg: budapestHero
+      ? `url(${budapestHero.poster})`
+      : "radial-gradient(120% 90% at 30% 20%, #f2d49a 0%, #c9a45c 30%, #5b4524 62%, #15110b 100%)",
+    heroVideo: budapestHero?.video,
+    preview: budapestHero?.preview && budapestHero.previewPoster ? { video: budapestHero.preview, poster: budapestHero.previewPoster } : undefined,
+    heroFit: budapestHero && budapestHero.height > budapestHero.width ? "contain" : "cover",
+    accent: "#c9a45c",
+    eyebrow: "Budapest, Apr 2025",
+    headline: "Bridges and ruin bars.",
+    local: {
+      lang: "hu",
+      name: "Magyarország",
+      headline: "Hidak és romkocsmák.",
+    },
+    dayLabels: {
+      // "2026-06-12": "Buda",
+    },
+    days: [
+      {
+        n: "01",
+        label: "Day one — Buda",
+        tiles: [
+          { wide: true, bg: "linear-gradient(160deg,#3d3222,#14100a)" },
+          { bg: "linear-gradient(160deg,#352b1d,#120e09)" },
+          { bg: "linear-gradient(160deg,#41352a,#15110c)" },
+        ],
+      },
+      {
+        n: "02",
+        label: "Day two — Pest",
+        tiles: [
+          { bg: "linear-gradient(160deg,#33291c,#110d08)" },
+          { wide: true, bg: "linear-gradient(160deg,#43372a,#16120c)" },
+          { bg: "linear-gradient(160deg,#3a2f21,#130f0a)" },
+        ],
+      },
+    ],
+  },
 };
 
+/** When a trip started — its earliest photo ("" for a trip with no media yet, which sorts as newest). */
+function tripStart(d: Destination) {
+  return getTripMedia(d.slug)[0]?.takenAt ?? "";
+}
+
+const byStart = (a: Destination, b: Destination) => {
+  const sa = tripStart(a) || "9999";
+  const sb = tripStart(b) || "9999";
+  return sa.localeCompare(sb);
+};
+
+/** Oldest trip first — the globe's travel order. */
+export const tripsOldestFirst: Destination[] = Object.values(destinations).sort(byStart);
+
+/** Newest trip first — homepage list and nav. */
+export const tripsNewestFirst: Destination[] = [...tripsOldestFirst].reverse();
+
+/**
+ * Homepage "Selected frames" picks. The homepage shows the same number per
+ * trip (the smallest trip's count) and shuffles them on every visit, so keep
+ * these balanced — 4 per trip fills 3 rows of 4.
+ */
 /** A homepage "Selected frames" pick — `id` is a media id from src/data/media/<trip>.json. */
 export interface HomeTile {
   trip: Destination["slug"];
@@ -151,14 +226,14 @@ export interface HomeTile {
 export const homeGrid: HomeTile[] = [
   { trip: "japan", id: "p1011355-8ea45d", caption: "Kyoto — Jan 2026" }, // Fushimi Inari
   { trip: "japan", id: "img-8332-6dcda9", caption: "Tokyo — Jan 2026" }, // teamLab (video)
-  { trip: "japan", id: "p1000358-d4d10c", caption: "Tokyo — Jan 2026" }, // Tokyo Tower
   { trip: "japan", id: "p1011039-5008bf", caption: "Kamakura — Jan 2026" }, // Enoden at sunset
-  { trip: "japan", id: "img-9292-889d9a", caption: "Kyoto — Jan 2026" }, // Kiyomizu-dera
-  { trip: "japan", id: "p1011195-78023f", caption: "Nara — Jan 2026" }, // deer
-  { trip: "japan", id: "p1011559-b3fe3c", caption: "Osaka — Jan 2026" }, // Osaka Castle
   { trip: "japan", id: "p1011799-74e964", caption: "Tokyo — Jan 2026" }, // Shibuya from above
   { trip: "iceland", id: "img-0372-3791c6", caption: "Kirkjufell — Apr 2026" },
   { trip: "iceland", id: "img-0526-79fe0c", caption: "Lóndrangar — Apr 2026" }, // video
   { trip: "iceland", id: "p1022344-e02595", caption: "Hafnarhólmi — May 2026" }, // puffin
   { trip: "iceland", id: "p1022363-f1f509", caption: "Múlagljúfur — May 2026" },
+  { trip: "budapest", id: "img-6028-00c4e0", caption: "Liberty Bridge — Apr 2025" },
+  { trip: "budapest", id: "img-6065-afe3c5", caption: "St. Stephen's — Apr 2025" },
+  { trip: "budapest", id: "img-6109-46ed54", caption: "Danube — Apr 2025" },
+  { trip: "budapest", id: "img-6175-430a89", caption: "Ruin bars — Apr 2025" },
 ];

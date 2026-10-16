@@ -2,7 +2,7 @@ import { useRef } from 'react'
 import { motion, useScroll, useTransform, type MotionValue } from 'framer-motion'
 
 const MANIFESTO =
-  "I don't travel to escape. I travel to notice — the light changing, the silence between places, the scale of things I'll never fully explain. This is where I keep what I saw."
+  "No itineraries, no top tens. Just what I saw, roughly in the order I saw it."
 
 function Word({ word, progress, range }: { word: string; progress: MotionValue<number>; range: [number, number] }) {
   const opacity = useTransform(progress, range, [0.18, 1])
@@ -24,7 +24,7 @@ export default function Manifesto() {
   const words = MANIFESTO.split(' ')
 
   return (
-    <div ref={wrapperRef} className="relative h-[280vh] bg-(--color-bg)">
+    <div ref={wrapperRef} className="relative h-[200vh] bg-(--color-bg)">
       <div className="sticky top-0 flex h-screen items-center justify-center px-8 sm:px-16">
         <p className="max-w-4xl text-center font-display text-[clamp(1.9rem,4.4vw,3.6rem)] leading-[1.28] font-bold tracking-tight">
           {words.map((word, i) => (

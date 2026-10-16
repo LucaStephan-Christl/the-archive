@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type TouchEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { formatDuration, formatTakenAt, localLabel, placeLabel, type MediaItem } from "../data/media";
 import Local from "./Local";
@@ -47,7 +47,13 @@ export function MediaTile({ item, onOpen, layout = "justified" }: TileProps) {
       className={`group relative block cursor-zoom-in border-none bg-transparent p-0 ${layout === "fill" ? "h-full w-full" : ""}`}
       style={
         layout === "justified"
-          ? { flex: `${ratio} 1 calc(${ratio} * var(--row))`, aspectRatio: String(ratio) }
+          ? {
+              flex: `${ratio} 1 calc(${ratio} * var(--row))`,
+              aspectRatio: String(ratio),
+              // a tile left alone on a row (e.g. a portrait before a landscape on a
+              // phone) mustn't balloon to the full width — at most 1.5× its size
+              maxWidth: `calc(${ratio} * var(--row) * 1.5)`,
+            }
           : undefined
       }
       aria-label={[item.type === "video" ? "Play video" : "Open photo", formatTakenAt(item), placeLabel(item)]
@@ -107,6 +113,22 @@ interface LightboxProps {
 
 export function Lightbox({ items, index, openedId, onIndex, onClose }: LightboxProps) {
   const item = index === null ? null : items[index];
+
+  // swipe left/right to move through photos — the arrow buttons only show on wider screens
+  const touchStartX = useRef<number | null>(null);
+  const swipe = {
+    onTouchStart: (e: TouchEvent) => {
+      touchStartX.current = e.touches[0].clientX;
+    },
+    onTouchEnd: (e: TouchEvent) => {
+      const start = touchStartX.current;
+      touchStartX.current = null;
+      if (start === null || index === null || items.length < 2) return;
+      const dx = e.changedTouches[0].clientX - start;
+      if (Math.abs(dx) < 50) return;
+      onIndex(dx < 0 ? (index + 1) % items.length : (index - 1 + items.length) % items.length);
+    },
+  };
   const [fullLoaded, setFullLoaded] = useState<string | null>(null);
 
   useEffect(() => {
@@ -140,6 +162,7 @@ export function Lightbox({ items, index, openedId, onIndex, onClose }: LightboxP
             data-lenis-prevent
             className="fixed inset-0 z-[100]"
             onClick={onClose}
+            {...swipe}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -147,12 +170,21 @@ export function Lightbox({ items, index, openedId, onIndex, onClose }: LightboxP
           >
             <div className="absolute inset-0 bg-(--color-bg)/95 backdrop-blur-md" />
 
-            <div className="absolute inset-x-0 top-0 flex items-center justify-between px-6 py-5 text-[0.7rem] tracking-[0.12em] text-(--color-text-soft) uppercase sm:px-8">
-              <span>
-                {String(index + 1).padStart(2, "0")} / {String(items.length).padStart(2, "0")}
-                <span className="ml-4 text-(--color-text)">{formatTakenAt(item)}</span>
-                {placeLabel(item) && <span className="ml-4 text-(--color-text)">{placeLabel(item)}</span>}
-                <Local lang={item.lang} className="ml-2.5 text-[0.8rem] text-(--color-text-soft)">{localLabel(item)}</Local>
+            <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-4 px-5 py-5 text-[0.7rem] tracking-[0.12em] text-(--color-text-soft) uppercase sm:px-8">
+              {/* wraps onto a second line on a phone instead of overflowing */}
+              <span className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                <span>
+                  {String(index + 1).padStart(2, "0")} / {String(items.length).padStart(2, "0")}
+                </span>
+                <span className="text-(--color-text)">{formatTakenAt(item)}</span>
+                {placeLabel(item) && (
+                  <span className="text-(--color-text)">
+                    {placeLabel(item)}
+                    <Local lang={item.lang} className="ml-2.5 text-[0.8rem] text-(--color-text-soft)">
+                      {localLabel(item)}
+                    </Local>
+                  </span>
+                )}
               </span>
               <button
                 type="button"
@@ -185,6 +217,7 @@ export function Lightbox({ items, index, openedId, onIndex, onClose }: LightboxP
               exit={zooms ? undefined : { opacity: 0 }}
               transition={{ duration: 0.45, ease: EASE }}
               className="pointer-events-auto relative overflow-hidden"
+              {...swipe}
               style={{
                 borderRadius: RADIUS,
                 aspectRatio: String(ratio),

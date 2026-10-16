@@ -2,6 +2,8 @@ import { motion, useTransform, type MotionValue } from "framer-motion";
 import type { DestinationKind } from "../data/trips";
 
 const ICELAND_BLUE = "#00308f";
+const HUNGARY_RED = "#cd2a3e";
+const HUNGARY_GREEN = "#436f4d";
 
 // The sticky pin (see Destination.tsx) only lasts the first 2/3 of scroll
 // progress — past that the wrapper starts sliding away regardless of what
@@ -22,7 +24,8 @@ interface PortalProps {
 
 /**
  * The flag-homage portal: Japan gets the hinomaru circle, Iceland the
- * Nordic cross (offset toward the hoist, official 18:25 proportions).
+ * Nordic cross (offset toward the hoist, official 18:25 proportions),
+ * Hungary the tricolour (its white middle stripe is the window).
  * Both render as a full-viewport field of flag colour with a shape-shaped
  * hole in it — a window onto the real page underneath. Scrolling grows that
  * hole (the mask radius for Japan, shrinking corner tiles for Iceland)
@@ -53,18 +56,24 @@ export default function Portal({
   const cornerScale = useTransform(scrollYProgress, (p) =>
     reduceMotion ? 0 : 1 - easedProgress(p),
   );
-  const tlWidth = useTransform(cornerScale, (s) => `${24 * s}%`);
-  const tlHeight = useTransform(cornerScale, (s) => `${27.5 * s}%`);
-  const trWidth = useTransform(cornerScale, (s) => `${52 * s}%`);
-  const trHeight = useTransform(cornerScale, (s) => `${27.5 * s}%`);
-  const blWidth = useTransform(cornerScale, (s) => `${24 * s}%`);
-  const blHeight = useTransform(cornerScale, (s) => `${39 * s}%`);
-  const brWidth = useTransform(cornerScale, (s) => `${52 * s}%`);
-  const brHeight = useTransform(cornerScale, (s) => `${39 * s}%`);
+  // Each corner's full size comes from a CSS variable (.iceland-cross in
+  // index.css) — different on portrait screens — scaled down by the reveal.
+  const leftWidth = useTransform(cornerScale, (s) => `calc(var(--tl-w) * ${s})`);
+  const rightWidth = useTransform(cornerScale, (s) => `calc(var(--tr-w) * ${s})`);
+  const topHeight = useTransform(cornerScale, (s) => `calc(var(--t-h) * ${s})`);
+  const bottomHeight = useTransform(cornerScale, (s) => `calc(var(--b-h) * ${s})`);
+  // Hungary: the red and green thirds shrink toward the top and bottom edges,
+  // widening the white middle stripe — the window — until it's the whole screen
+  const bandHeight = useTransform(cornerScale, (s) => `${(100 / 3) * s}%`);
 
   return (
-    <div className="absolute inset-0" aria-hidden="true">
-      {kind === "circle" ? (
+    <div className="iceland-cross absolute inset-0" aria-hidden="true">
+      {kind === "stripes" ? (
+        <>
+          <motion.div className="absolute inset-x-0 top-0" style={{ height: bandHeight, background: HUNGARY_RED }} />
+          <motion.div className="absolute inset-x-0 bottom-0" style={{ height: bandHeight, background: HUNGARY_GREEN }} />
+        </>
+      ) : kind === "circle" ? (
         <motion.div
           className="absolute inset-0 bg-white"
           style={{ maskImage: circleMask, WebkitMaskImage: circleMask }}
@@ -73,19 +82,19 @@ export default function Portal({
         <>
           <motion.div
             className="absolute top-0 left-0"
-            style={{ width: tlWidth, height: tlHeight, background: ICELAND_BLUE }}
+            style={{ width: leftWidth, height: topHeight, background: ICELAND_BLUE }}
           />
           <motion.div
             className="absolute top-0 right-0"
-            style={{ width: trWidth, height: trHeight, background: ICELAND_BLUE }}
+            style={{ width: rightWidth, height: topHeight, background: ICELAND_BLUE }}
           />
           <motion.div
             className="absolute bottom-0 left-0"
-            style={{ width: blWidth, height: blHeight, background: ICELAND_BLUE }}
+            style={{ width: leftWidth, height: bottomHeight, background: ICELAND_BLUE }}
           />
           <motion.div
             className="absolute bottom-0 right-0"
-            style={{ width: brWidth, height: brHeight, background: ICELAND_BLUE }}
+            style={{ width: rightWidth, height: bottomHeight, background: ICELAND_BLUE }}
           />
         </>
       )}

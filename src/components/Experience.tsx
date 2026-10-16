@@ -4,7 +4,7 @@ import { useInView } from "framer-motion";
 import Local from "./Local";
 import Reveal from "./Reveal";
 import { Lightbox, MediaTile } from "./MediaGallery";
-import { dayCities, dayPlaces, formatDay, getTripMedia, groupByDay, route, type Named } from "../data/media";
+import { dayCities, dayPlaces, dayParts, getTripMedia, groupByDay, route, type Named } from "../data/media";
 import type { Destination } from "../data/trips";
 
 const TripMap = lazy(() => import("./TripMap"));
@@ -39,7 +39,7 @@ export default function Experience({ destination }: ExperienceProps) {
 
   return (
     <section className="relative bg-(--color-bg) text-(--color-text)">
-      <div className="sticky top-0 z-10 flex items-center justify-between bg-gradient-to-b from-(--color-bg) via-(--color-bg)/85 to-transparent px-8 py-5">
+      <div className="sticky top-0 z-10 flex items-center justify-between bg-gradient-to-b from-(--color-bg) via-(--color-bg)/85 to-transparent px-5 py-5 sm:px-8">
         <Link
           to="/"
           className="inline-flex items-center gap-1.5 border-none bg-transparent p-0 text-[0.74rem] tracking-wide text-(--color-text-soft) hover:text-(--color-text)"
@@ -51,7 +51,7 @@ export default function Experience({ destination }: ExperienceProps) {
         </span>
       </div>
 
-      <div className="px-8 pt-4 pb-8">
+      <div className="px-5 pt-4 pb-8 sm:px-8">
         <p className="mb-3 text-[0.72rem] tracking-[0.16em] uppercase text-(--color-accent)">
           {destination.eyebrow}
         </p>
@@ -79,7 +79,7 @@ export default function Experience({ destination }: ExperienceProps) {
       </div>
 
       {media.some((m) => m.lat !== undefined) && (
-        <div ref={mapSectionRef} className="px-8 pb-6">
+        <div ref={mapSectionRef} className="px-5 pb-6 sm:px-8">
           <Reveal className="mb-5 flex flex-wrap items-baseline justify-between gap-3">
             <div className="flex items-baseline gap-2.5">
               <span className="text-[0.72rem] text-(--color-accent)">Map</span>
@@ -90,33 +90,32 @@ export default function Experience({ destination }: ExperienceProps) {
           </Reveal>
           {/* Leaflet (and its tiles) only load once the map is near the viewport */}
           {mapInView ? (
-            <Suspense fallback={<div className="h-[72vh] min-h-[420px] rounded-(--radius) bg-(--color-text)/5" />}>
+            <Suspense fallback={<div className="h-[60vh] min-h-[380px] sm:h-[72vh] sm:min-h-[420px] rounded-(--radius) bg-(--color-text)/5" />}>
               <TripMap items={media} accent={destination.accent} onOpen={openFromMap} />
             </Suspense>
           ) : (
-            <div className="h-[72vh] min-h-[420px] rounded-(--radius) bg-(--color-text)/5" />
+            <div className="h-[60vh] min-h-[380px] sm:h-[72vh] sm:min-h-[420px] rounded-(--radius) bg-(--color-text)/5" />
           )}
         </div>
       )}
 
       {media.length > 0 ? (
-        <div className="relative px-8 pb-20">
-          <div className="pointer-events-none absolute top-0 bottom-8 left-[2.65rem] w-px bg-(--color-text)/15" />
-          {mediaDays.map((day, d) => {
+        <div className="relative px-5 pb-20 sm:px-8">
+          <div className="pointer-events-none absolute top-0 bottom-8 left-[1.9rem] w-px sm:left-[2.65rem] bg-(--color-text)/15" />
+          {mediaDays.map((day) => {
             // dayLabels (trips.ts) overrides the cities derived from the photos
             const override = destination.dayLabels?.[day.date];
             const cities: Named[] = override ? [{ en: override }] : dayCities(day.items);
             const places = dayPlaces(day.items);
             return (
-            <div key={day.date} className="relative pt-9 pl-10">
+            <div key={day.date} className="relative pt-9 pl-8 sm:pl-10">
               <span className="absolute top-9 left-[calc(0.65rem+0.5px)] h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-(--color-accent)" />
               <Reveal className="mb-4">
                 <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <span className="font-display text-lg font-semibold">
-                    {String(d + 1).padStart(2, "0")}
-                  </span>
+                  {/* day of the month, big — then the month in the softer tone */}
+                  <span className="font-display text-lg font-semibold">{dayParts(day.date).day}</span>
                   <span className="text-[0.74rem] tracking-[0.08em] uppercase text-(--color-text-soft)">
-                    {formatDay(day.date)}
+                    {dayParts(day.date).month}
                     {cities.length > 0 && " — "}
                     {cities.map((city, i) => (
                       <span key={city.en}>
@@ -141,9 +140,10 @@ export default function Experience({ destination }: ExperienceProps) {
                   </p>
                 )}
               </Reveal>
-              <Reveal>
-                {/* --row: target row height for the justified layout */}
-                <div className="flex flex-wrap gap-3 [--row:clamp(150px,22vw,300px)]">
+              {/* amount 0: a day can be several screens tall on a phone — reveal it as soon as it arrives */}
+              <Reveal amount={0}>
+                {/* --row: target row height for the justified layout (≈2 portrait shots per row on a phone) */}
+                <div className="flex flex-wrap gap-2 sm:gap-3 [--row:clamp(190px,22vw,300px)]">
                   {day.items.map((item) => (
                     <MediaTile key={item.id} item={item} onOpen={() => open(item.id)} />
                   ))}
@@ -164,10 +164,10 @@ export default function Experience({ destination }: ExperienceProps) {
           />
         </div>
       ) : (
-      <div className="relative px-8 pb-20">
-        <div className="pointer-events-none absolute top-0 bottom-8 left-[2.65rem] w-px bg-(--color-text)/15" />
+      <div className="relative px-5 pb-20 sm:px-8">
+        <div className="pointer-events-none absolute top-0 bottom-8 left-[1.9rem] w-px sm:left-[2.65rem] bg-(--color-text)/15" />
         {destination.days.map((day) => (
-          <div key={day.n} className="relative pt-9 pl-10">
+          <div key={day.n} className="relative pt-9 pl-8 sm:pl-10">
             <span className="absolute top-9 left-[calc(0.65rem+0.5px)] h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-(--color-accent)" />
             <Reveal className="mb-4 flex items-baseline gap-3">
               <span className="font-display text-lg font-semibold">

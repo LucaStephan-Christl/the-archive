@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from 'framer-motion'
-import { destinations } from '../data/trips'
+import { tripsNewestFirst } from '../data/trips'
 import Local from './Local'
 import { CURSOR_ZONE_ATTR, setCursorState } from '../lib/cursorStore'
 
-const DESTINATION_LIST = Object.values(destinations)
+const DESTINATION_LIST = tripsNewestFirst
 const EASE = [0.4, 0, 0.2, 1] as const
 
 /** Stays hidden over the cinematic hero; slides in once you've scrolled past it. */
@@ -101,8 +101,8 @@ export default function Nav() {
                       setCursorState({
                         label: 'Enter',
                         color: destination.accent,
-                        image: destination.heroBg,
-                        video: destination.heroVideo,
+                        image: destination.preview ? `url(${destination.preview.poster})` : destination.heroBg,
+                        video: destination.preview?.video ?? destination.heroVideo,
                       })
                     }
                     className="group flex items-baseline justify-between gap-6 border-b border-(--color-line) py-5 transition-opacity duration-300 last:border-b-0"
@@ -111,19 +111,23 @@ export default function Nav() {
                       <span className="text-[0.72rem] text-(--color-text-soft)">
                         {String(i + 1).padStart(2, '0')}
                       </span>
-                      <span
-                        className="font-display text-[clamp(2rem,6vw,3.6rem)] leading-none font-semibold tracking-tight uppercase text-(--color-text) transition-colors duration-300"
-                        style={{ ['--hover-color' as string]: destination.accent }}
-                      >
-                        <span className="transition-colors duration-300 group-hover:text-(--hover-color)">
-                          {destination.slug}
+                      {/* local name sits under the title on a phone (a long one like
+                          Magyarország overflows beside it), beside it from sm up */}
+                      <div className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:items-baseline sm:gap-5">
+                        <span
+                          className="font-display text-[clamp(2rem,6vw,3.6rem)] leading-none font-semibold tracking-tight uppercase text-(--color-text) transition-colors duration-300"
+                          style={{ ['--hover-color' as string]: destination.accent }}
+                        >
+                          <span className="transition-colors duration-300 group-hover:text-(--hover-color)">
+                            {destination.slug}
+                          </span>
                         </span>
-                      </span>
-                      {destination.local && (
-                        <Local lang={destination.local.lang} className="text-[1.1rem] text-(--color-text-soft)">
-                          {destination.local.name}
-                        </Local>
-                      )}
+                        {destination.local && (
+                          <Local lang={destination.local.lang} className="text-[1.1rem] text-(--color-text-soft)">
+                            {destination.local.name}
+                          </Local>
+                        )}
+                      </div>
                     </div>
                     <span className="hidden text-[0.68rem] tracking-[0.14em] text-(--color-text-soft) uppercase sm:block">
                       {destination.eyebrow}

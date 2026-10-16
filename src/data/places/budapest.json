@@ -1,0 +1,26 @@
+{
+  "_readme": "Where each photo was taken, for the timeline labels, route and map. Read by `yarn media` (re-run after editing — it's quick, nothing is re-encoded). A photo gets a place by (1) its filename in a place's `files`, else (2) its own GPS within a place's `radiusKm` — the closest match wins, so a landmark's small radius beats the city around it — else (3) its capture time inside a place's [`from`, `to`) range (local time, Europe/Budapest). Photos with their own GPS keep their exact map position (unless the place has `overrideGps`). `local` is the Hungarian name where it differs from the English. Camera photos without GPS (e.g. the Lumix) need time ranges — add one per stop, like src/data/places/japan.json.",
+  "lang": "hu",
+  "cities": {},
+  "places": [
+    { "name": "Budapest Airport", "local": "Liszt Ferenc repülőtér", "city": "Budapest", "lat": 47.4369, "lon": 19.2556, "files": ["IMG_6015.jpeg"], "overrideGps": true },
+    { "name": "Budapest", "city": "Budapest", "lat": 47.4979, "lon": 19.0402, "radiusKm": 15 },
+    { "name": "Budapest", "city": "Budapest", "from": "2025-04-20T08:30", "to": "2025-04-23T12:00" },
+
+    { "name": "Hungarian Parliament", "local": "Országház", "city": "Budapest", "lat": 47.507, "lon": 19.0456, "radiusKm": 0.35 },
+    { "name": "Chain Bridge", "local": "Széchenyi lánchíd", "city": "Budapest", "lat": 47.4989, "lon": 19.0436, "radiusKm": 0.25 },
+    { "name": "Buda Castle", "local": "Budavári Palota", "city": "Budapest", "lat": 47.4962, "lon": 19.0396, "radiusKm": 0.35 },
+    { "name": "Fisherman's Bastion", "local": "Halászbástya", "city": "Budapest", "lat": 47.5022, "lon": 19.0348, "radiusKm": 0.2 },
+    { "name": "Gellért Hill", "local": "Gellért-hegy", "city": "Budapest", "lat": 47.487, "lon": 19.0466, "radiusKm": 0.5 },
+    { "name": "St. Stephen's Basilica", "local": "Szent István-bazilika", "city": "Budapest", "lat": 47.5009, "lon": 19.0538, "radiusKm": 0.2 },
+    { "name": "Jewish Quarter", "local": "Zsidónegyed", "city": "Budapest", "lat": 47.4974, "lon": 19.0623, "radiusKm": 0.5 },
+    { "name": "Great Market Hall", "local": "Nagy Vásárcsarnok", "city": "Budapest", "lat": 47.487, "lon": 19.0583, "radiusKm": 0.2 },
+    { "name": "Heroes' Square", "local": "Hősök tere", "city": "Budapest", "lat": 47.515, "lon": 19.0778, "radiusKm": 0.3 },
+    { "name": "Széchenyi Baths", "local": "Széchenyi fürdő", "city": "Budapest", "lat": 47.5189, "lon": 19.082, "radiusKm": 0.3 },
+    { "name": "Margaret Island", "local": "Margitsziget", "city": "Budapest", "lat": 47.5266, "lon": 19.0472, "radiusKm": 1.2 },
+    { "name": "Liberty Bridge", "local": "Szabadság híd", "city": "Budapest", "lat": 47.4857, "lon": 19.0535, "radiusKm": 0.15 },
+    { "name": "Széchenyi Square", "local": "Széchenyi István tér", "city": "Budapest", "lat": 47.5, "lon": 19.047, "radiusKm": 0.25 },
+    { "name": "Danube terrace", "local": "Duna-part", "city": "Budapest", "lat": 47.508, "lon": 19.0434, "radiusKm": 0.3 },
+    { "name": "City Park", "local": "Városliget", "city": "Budapest", "lat": 47.5125, "lon": 19.089, "radiusKm": 1.0 }
+  ]
+}

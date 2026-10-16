@@ -16,7 +16,7 @@ export default function Local({
 }) {
   if (!children) return null;
   return (
-    <span lang={lang} className={`font-jp tracking-normal normal-case ${className}`}>
+    <span lang={lang} className={`font-jp tracking-normal whitespace-nowrap normal-case ${className}`}>
       {children}
     </span>
   );

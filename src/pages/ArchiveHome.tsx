@@ -1,25 +1,50 @@
 import { useCallback, useState } from "react";
 import { Link } from "react-router-dom";
 import Footer from "../components/Footer";
+import GlobeSection from "../components/GlobeSection";
 import Hero from "../components/Hero";
 import Local from "../components/Local";
 import Manifesto from "../components/Manifesto";
 import { Lightbox, MediaTile } from "../components/MediaGallery";
-import { getTripMedia } from "../data/media";
+import { getTripMedia, type MediaItem } from "../data/media";
 import Nav from "../components/Nav";
 import Reveal from "../components/Reveal";
-import { destinations, homeGrid, type Destination } from "../data/trips";
+import { tripsNewestFirst, homeGrid, type Destination } from "../data/trips";
 import { CURSOR_ZONE_ATTR, setCursorState, useCursorState } from "../lib/cursorStore";
 
-const DESTINATION_LIST = Object.values(destinations);
+const DESTINATION_LIST = tripsNewestFirst;
 const TOTAL_FRAMES = DESTINATION_LIST.reduce((n, d) => n + getTripMedia(d.slug).length, 0);
 
 // Resolve each pick to its media item; ids that no longer exist (file
 // removed from media/) are just skipped rather than breaking the page.
-const FRAMES = homeGrid.flatMap((tile) => {
-  const item = getTripMedia(tile.trip).find((m) => m.id === tile.id);
-  return item ? [{ tile, item }] : [];
-});
+const shuffle = <T,>(list: T[]) => {
+  const a = [...list];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+
+/**
+ * Selected frames, shuffled fresh on every visit: the same number from each
+ * trip (the smallest trip's count), dealt round-robin from the trips in a
+ * random order — so it's mixed, and two frames from one trip never sit side
+ * by side. Picks whose media no longer exists are skipped.
+ */
+function shuffledFrames() {
+  const byTrip = new Map<string, { tile: (typeof homeGrid)[number]; item: MediaItem }[]>();
+  for (const tile of homeGrid) {
+    const item = getTripMedia(tile.trip).find((m) => m.id === tile.id);
+    if (!item) continue;
+    byTrip.set(tile.trip, [...(byTrip.get(tile.trip) ?? []), { tile, item }]);
+  }
+  const perTrip = Math.min(...[...byTrip.values()].map((frames) => frames.length));
+  const decks = shuffle([...byTrip.values()]).map((frames) => shuffle(frames).slice(0, perTrip));
+  return Array.from({ length: perTrip }, (_, round) => decks.map((deck) => deck[round])).flat();
+}
+
+const FRAMES = shuffledFrames();
 const FRAME_ITEMS = FRAMES.map((f) => f.item);
 
 export default function ArchiveHome() {
@@ -41,8 +66,8 @@ export default function ArchiveHome() {
     setCursorState({
       label: "Enter",
       color: destination.accent,
-      image: destination.heroBg,
-      video: destination.heroVideo,
+      image: destination.preview ? `url(${destination.preview.poster})` : destination.heroBg,
+      video: destination.preview?.video ?? destination.heroVideo,
     });
   }
 
@@ -83,20 +108,23 @@ export default function ArchiveHome() {
                   <span className="text-[0.72rem] text-(--color-text-soft)">
                     {String(i + 1).padStart(2, "0")}
                   </span>
-                  <span
-                    className="font-display text-[clamp(2.4rem,7vw,5.5rem)] leading-none font-semibold tracking-tight uppercase transition-colors duration-300"
-                    style={{ color: isHovered ? destination.accent : undefined }}
-                  >
-                    {destination.slug}
-                  </span>
-                  {destination.local && (
-                    <Local
-                      lang={destination.local.lang}
-                      className="text-[clamp(1rem,2.4vw,1.7rem)] text-(--color-text-soft) transition-colors duration-300"
+                  {/* local name under the title on a phone, beside it from sm up */}
+                  <div className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:items-baseline sm:gap-5">
+                    <span
+                      className="font-display text-[clamp(2.4rem,7vw,5.5rem)] leading-none font-semibold tracking-tight uppercase transition-colors duration-300"
+                      style={{ color: isHovered ? destination.accent : undefined }}
                     >
-                      {destination.local.name}
-                    </Local>
-                  )}
+                      {destination.slug}
+                    </span>
+                    {destination.local && (
+                      <Local
+                        lang={destination.local.lang}
+                        className="text-[clamp(1rem,2.4vw,1.7rem)] text-(--color-text-soft) transition-colors duration-300"
+                      >
+                        {destination.local.name}
+                      </Local>
+                    )}
+                  </div>
                 </div>
                 <div className="hidden text-right sm:block">
                   <p className="mb-1 text-[0.68rem] tracking-[0.14em] text-(--color-text-soft) uppercase">
@@ -136,6 +164,8 @@ export default function ArchiveHome() {
         onIndex={setFrameIndex}
         onClose={closeFrame}
       />
+
+      <GlobeSection />
 
       <Reveal className="relative z-10 flex justify-between border-t border-(--color-line) px-8 py-6 text-[0.68rem] tracking-[0.08em] uppercase text-(--color-text-soft)">
         <span>The Archive — est. 2026</span>

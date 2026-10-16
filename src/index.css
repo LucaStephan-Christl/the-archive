@@ -78,6 +78,16 @@
   --color-flag-accent: #d72828;
 }
 
+/* labels sit on the red top band / green bottom band of the tricolour */
+[data-dest="budapest"] {
+  --color-bg: #110f0b;
+  --color-accent: #b8955a;
+  --color-landing-bg: #cd2a3e;
+  --color-landing-ink: #ffffff;
+  --color-landing-soft: #f3d3d8;
+  --color-flag-accent: #436f4d;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -213,6 +223,27 @@ body {
 }
 .leaflet-control-attribution a {
   color: var(--color-text-soft) !important;
+}
+
+/* Iceland portal: full size of the four blue corners around the cross-shaped
+   hole (Portal.tsx scales them down as you scroll). Landscape keeps the
+   original wide-screen layout; portrait uses the real flag geometry — 25×18
+   units, arms 4 units thick, vertical arm 7 units from the hoist — sized to
+   the screen width and centred vertically, so both arms are equally thick. */
+.iceland-cross {
+  --tl-w: 24%;
+  --tr-w: 52%;
+  --t-h: 27.5%;
+  --b-h: 39%;
+}
+@media (orientation: portrait) {
+  .iceland-cross {
+    --u: 4vw; /* 100vw / 25 units */
+    --tl-w: calc(7 * var(--u));
+    --tr-w: calc(100% - 11 * var(--u));
+    --t-h: calc(50% - 2 * var(--u));
+    --b-h: calc(50% - 2 * var(--u));
+  }
 }
 
 /*

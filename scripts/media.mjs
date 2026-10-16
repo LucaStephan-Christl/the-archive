@@ -45,7 +45,7 @@ const PLACES_DIR = path.join(ROOT, "src", "data", "places");
  *   { "timezone": "Asia/Tokyo", "clockShiftHours": { "DC-S9": 8 } }
  * where clockShiftHours is keyed by the EXIF camera Model.
  */
-const TIMEZONES = { japan: "Asia/Tokyo", iceland: "Atlantic/Reykjavik" };
+const TIMEZONES = { japan: "Asia/Tokyo", iceland: "Atlantic/Reykjavik", budapest: "Europe/Budapest" };
 
 const IMAGE_EXT = new Set([".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff", ".heic", ".heif"]);
 const VIDEO_EXT = new Set([".mov", ".mp4", ".m4v"]);
@@ -127,7 +127,10 @@ async function processTrip(trip) {
         console.log(`  ✓ ${label}`);
       }
       media.thumb = await ensureThumb(outDir, trip, media);
-      items.push({ ...media, takenAt: date.takenAt, source: file, fingerprint, _date: date });
+      // camera: EXIF model for photos, Apple's model tag for iPhone videos —
+      // Lumix videos carry none, so they borrow it from the file-name series
+      const camera = date.camera ?? (isVideo && /^P1\d+/.test(file) ? "DC-S9" : undefined);
+      items.push({ ...media, takenAt: date.takenAt, ...(camera && { camera }), source: file, fingerprint, _date: date });
     } catch (err) {
       console.warn(`  ✗ ${label}  ${err.message.split("\n")[0]}`);
     }
@@ -147,7 +150,7 @@ async function processTrip(trip) {
   }
 
   items.sort((a, b) => a.takenAt.localeCompare(b.takenAt) || a.id.localeCompare(b.id));
-  const hero = await processHero(srcDir, outDir, trip, previous?.hero);
+  const hero = await processHero(srcDir, outDir, trip, previous?.hero, config.heroFps ?? 30);
   await pruneOrphans(outDir, items, hero);
   const manifest = { trip, lang: placesFile?.lang, hero, items };
   await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
@@ -219,10 +222,11 @@ async function readImageDate(srcPath, timeZone, clockShift) {
   const offset = exif.OffsetTimeOriginal ?? exif.OffsetTime;
   // Camera recorded its UTC offset — convert to the trip's local time. This
   // fixes a camera left on home time automatically.
-  const takenAt = offset
-    ? utcToZone(new Date(`${exifToIso(exifDate)}${offset}`), timeZone)
-    : shiftIso(exifToIso(exifDate), clockShift[exif.Model] ?? 0);
-  return { takenAt, trusted: !!exif.Model, fallback: false, gps };
+  // clockShiftHours (trip.json) corrects a camera whose clock was simply set
+  // wrong (e.g. AM/PM swapped) — applied whether or not it recorded an offset
+  const local = offset ? utcToZone(new Date(`${exifToIso(exifDate)}${offset}`), timeZone) : exifToIso(exifDate);
+  const takenAt = shiftIso(local, clockShift[exif.Model] ?? 0);
+  return { takenAt, trusted: !!exif.Model, fallback: false, gps, camera: exif.Model?.trim() };
 }
 
 async function readVideoDate(srcPath, timeZone) {
@@ -231,8 +235,9 @@ async function readVideoDate(srcPath, timeZone) {
   const gps = loc ? [Number(loc[1]), Number(loc[2])] : null;
   const apple = info.match(/com\.apple\.quicktime\.creationdate\s*:\s*(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:[+-]\d\d:?\d\d|Z))/);
   const qt = info.match(/creation_time\s*:\s*(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z)/);
-  if (apple) return { takenAt: utcToZone(new Date(apple[1].replace(/([+-]\d\d)(\d\d)$/, "$1:$2")), timeZone), trusted: true, fallback: false, gps };
-  if (qt) return { takenAt: utcToZone(new Date(qt[1]), timeZone), trusted: true, fallback: false, gps };
+  const camera = info.match(/com\.apple\.quicktime\.model\s*:\s*(.+)/)?.[1]?.trim();
+  if (apple) return { takenAt: utcToZone(new Date(apple[1].replace(/([+-]\d\d)(\d\d)$/, "$1:$2")), timeZone), trusted: true, fallback: false, gps, camera };
+  if (qt) return { takenAt: utcToZone(new Date(qt[1]), timeZone), trusted: true, fallback: false, gps, camera };
   return { ...(await fileDate(srcPath)), trusted: false, gps };
 }
 
@@ -246,10 +251,11 @@ function assignPlaces(items, places, cities = {}) {
   for (const item of items) {
     const t = item.takenAt.slice(0, 16);
     const gps = item._date.gps;
+    // a photo's own GPS is more precise than a time range, so it wins
     const place =
       places.find((p) => p.files?.includes(item.source)) ??
-      places.find((p) => p.from && p.to && t >= p.from && t < p.to) ??
-      (gps ? nearestPlace(places, gps) : undefined);
+      (gps ? nearestPlace(places, gps) : undefined) ??
+      places.find((p) => p.from && p.to && t >= p.from && t < p.to);
 
     if (place) {
       item.city = place.city;
@@ -260,7 +266,8 @@ function assignPlaces(items, places, cities = {}) {
         if (local) item.placeJa = local;
       }
     }
-    if (gps) {
+    // `overrideGps` on a place: pin the photo at the place, not where its GPS says
+    if (gps && !place?.overrideGps) {
       [item.lat, item.lon] = gps.map((v) => Math.round(v * 1e5) / 1e5);
       item.exact = true;
     } else if (place?.lat !== undefined) {
@@ -272,19 +279,21 @@ function assignPlaces(items, places, cities = {}) {
 }
 
 /**
- * For a photo with its own GPS that no time range claimed: the closest place
- * whose `radiusKm` it falls inside — so a small radius on a landmark
- * (Hallgrímskirkja, 0.5 km) beats the city around it (Reykjavík, 20 km).
+ * For a photo with its own GPS: of the places whose `radiusKm` it falls
+ * inside, the most specific one (smallest radius) — so a landmark
+ * (Buda Castle, 0.35 km) beats the city around it (Budapest, 15 km) even
+ * when the city's centre point happens to be closer. Ties go to the nearer.
  */
 function nearestPlace(places, [lat, lon]) {
   let best;
-  let bestKm = Infinity;
+  let bestKey = [Infinity, Infinity];
   for (const p of places) {
     if (p.lat === undefined || !p.radiusKm) continue;
     const km = distanceKm(lat, lon, p.lat, p.lon);
-    if (km <= p.radiusKm && km < bestKm) {
+    if (km > p.radiusKm) continue;
+    if (p.radiusKm < bestKey[0] || (p.radiusKm === bestKey[0] && km < bestKey[1])) {
       best = p;
-      bestKm = km;
+      bestKey = [p.radiusKm, km];
     }
   }
   return best;
@@ -302,11 +311,11 @@ function distanceKm(lat1, lon1, lat2, lon2) {
 
 /**
  * media/<trip>/hero/ — drop one raw clip in; it's encoded like the Japan
- * hero: long edge 2560 (sharp on a Retina full-height hero), up to 30fps,
- * CRF 23, no audio, HDR tone-mapped, plus a first-frame poster that
+ * hero: long edge 2560 (sharp on a Retina full-height hero), up to 30fps (or the trip's heroFps),
+ * CRF 26, no audio, HDR tone-mapped, plus a first-frame poster that
  * shows while it loads. Re-encodes only when the clip changes.
  */
-async function processHero(srcDir, outDir, trip, previous) {
+async function processHero(srcDir, outDir, trip, previous, maxFps) {
   const heroDir = path.join(srcDir, "hero");
   const clip = (await fs.readdir(heroDir).catch(() => []))
     .filter((f) => !f.startsWith(".") && VIDEO_EXT.has(path.extname(f).toLowerCase()))
@@ -315,12 +324,62 @@ async function processHero(srcDir, outDir, trip, previous) {
 
   const srcPath = path.join(heroDir, clip);
   const stat = await fs.stat(srcPath);
-  const fingerprint = `${clip}-${stat.size}-${Math.round(stat.mtimeMs)}-v2`;
+  const fingerprint = `${clip}-${stat.size}-${Math.round(stat.mtimeMs)}-v3-${maxFps}fps`;
   const mp4 = path.join(outDir, "hero.mp4");
   const poster = path.join(outDir, "hero-poster.webp");
   const exists = async (f) => fs.access(f).then(() => true, () => false);
-  if (previous?.fingerprint === fingerprint && (await exists(mp4)) && (await exists(poster))) return previous;
+  let hero;
+  if (previous?.fingerprint === fingerprint && (await exists(mp4)) && (await exists(poster))) {
+    hero = previous;
+  } else {
+    hero = await encodeHero(srcPath, clip, mp4, poster, trip, fingerprint, maxFps);
+  }
+  return { ...hero, ...(await ensureHeroPreview(srcPath, clip, outDir, trip, hero)) };
+}
 
+/**
+ * A small portrait cut of the hero for the places that show it in a little
+ * frame — the homepage hover-cursor circle and the globe's trip card.
+ * Cropping the full-width hero there showed slivers of a triptych's side
+ * panels and its dark margins, so instead: a triptych (a "triptych" master,
+ * three 772×1372 panels at x 61/894/1727, y 34) gives just its middle panel,
+ * inset past the rounded corners; anything else is centre-cropped to 4:5.
+ * 540px wide, 30fps — light enough for a 140px circle. Cached on its own.
+ */
+async function ensureHeroPreview(srcPath, clip, outDir, trip, hero) {
+  const video = path.join(outDir, "hero-preview.mp4");
+  const poster = path.join(outDir, "hero-preview-poster.webp");
+  const fingerprint = `${hero.fingerprint}-preview-v1`;
+  const exists = async (f) => fs.access(f).then(() => true, () => false);
+  if (hero.previewFingerprint === fingerprint && (await exists(video)) && (await exists(poster))) {
+    return { preview: hero.preview, previewPoster: hero.previewPoster, previewFingerprint: fingerprint };
+  }
+
+  const crop = /triptych/i.test(clip)
+    ? "crop=iw*724/2560:ih*1324/1440:iw*918/2560:ih*58/1440"
+    : "crop='min(iw,ih*4/5)':ih";
+  await run(ffmpegPath, [
+    "-hide_banner", "-loglevel", "error", "-y", "-i", srcPath,
+    "-an", "-vf", `${crop},scale=540:-2:flags=lanczos,fps=30,format=yuv420p`,
+    "-c:v", "libx264", "-preset", "slow", "-crf", "24", "-profile:v", "high",
+    "-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709",
+    "-movflags", "+faststart",
+    video,
+  ], { maxBuffer: 1 << 26 });
+  await run(ffmpegPath, [
+    "-hide_banner", "-loglevel", "error", "-y", "-i", video,
+    "-frames:v", "1", "-c:v", "libwebp", "-quality", "82", poster,
+  ]);
+  const { size } = await fs.stat(video);
+  console.log(`  ✓ hero preview: ${(size / 1e6).toFixed(1)} MB`);
+  return {
+    preview: `/media/${trip}/hero-preview.mp4`,
+    previewPoster: `/media/${trip}/hero-preview-poster.webp`,
+    previewFingerprint: fingerprint,
+  };
+}
+
+async function encodeHero(srcPath, clip, mp4, poster, trip, fingerprint, maxFps) {
   console.log(`  … hero: encoding ${clip}`);
   const info = await probe(srcPath);
   const isHdr = /arib-std-b67|smpte2084/.test(info);
@@ -329,13 +388,15 @@ async function processHero(srcDir, outDir, trip, previous) {
     "tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,";
   const scale = `scale='if(gte(iw,ih),min(${HERO_EDGE},iw),-2)':'if(gte(iw,ih),-2,min(${HERO_EDGE},ih))':flags=lanczos`;
   const srcFps = parseFloat(info.match(/, ([\d.]+) fps/)?.[1] ?? "0");
-  // 30fps is plenty for a background loop and roughly halves the file
-  const vf = `${isHdr ? tonemap : ""}${scale}${srcFps > 30 ? ",fps=30" : ""},format=yuv420p`;
+  // capped at 30fps by default (plenty for a background loop, roughly halves
+  // the file); a trip can raise it with "heroFps" in media/<trip>/trip.json
+  const vf = `${isHdr ? tonemap : ""}${scale}${srcFps > maxFps ? `,fps=${maxFps}` : ""},format=yuv420p`;
 
   await run(ffmpegPath, [
     "-hide_banner", "-loglevel", "error", "-y", "-i", srcPath,
     "-an", "-vf", vf,
-    "-c:v", "libx264", "-preset", "slow", "-crf", "23", "-profile:v", "high",
+    // CRF 26: visually identical to 23 on a moving background loop, ~⅓ smaller
+    "-c:v", "libx264", "-preset", "slow", "-crf", "26", "-profile:v", "high",
     "-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709",
     "-movflags", "+faststart",
     mp4,
@@ -518,7 +579,7 @@ async function outputsExist(outDir, item) {
 
 async function pruneOrphans(outDir, items, hero) {
   const keep = new Set(
-    [...items.flatMap((i) => [i.src, i.full, i.poster, i.thumb]), hero?.video, hero?.poster]
+    [...items.flatMap((i) => [i.src, i.full, i.poster, i.thumb]), hero?.video, hero?.poster, hero?.preview, hero?.previewPoster]
       .filter(Boolean)
       .map((p) => path.basename(p)),
   );
