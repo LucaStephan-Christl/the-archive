@@ -77,7 +77,10 @@ export default function Hero() {
             transition={{ duration: 0.8, ease: EASE, delay: d(T.subtitleStart) }}
             className="mb-4 text-[0.78rem] tracking-[0.28em] text-(--color-text) uppercase md:text-sm"
           >
-            Personal travel archive — Luca Christl
+            {/* two lines on a phone, split at the dash rather than leaving it dangling */}
+            Personal travel archive<span className="hidden sm:inline"> — </span>
+            <br className="sm:hidden" />
+            Luca Christl
           </motion.p>
           <motion.h1
             initial={{ opacity: 0, y: 26 }}

@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState, type TouchEvent } from "react";
+import { useEffect, useRef, useState, type MouseEvent, type TouchEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { formatDuration, formatTakenAt, localLabel, placeLabel, type MediaItem } from "../data/media";
 import Local from "./Local";
+import { useAutoplay } from "../lib/useAutoplay";
 
 const EASE = [0.4, 0, 0.2, 1] as const;
 const RADIUS = 16; // matches --radius; set inline so framer corrects it during the zoom
@@ -89,7 +90,10 @@ export function MediaTile({ item, onOpen, layout = "justified" }: TileProps) {
 
       {item.type === "video" && (
         <span
-          className="pointer-events-none absolute bottom-2.5 left-2.5 flex items-center gap-1.5 rounded-full bg-black/40 px-2.5 py-1 text-[0.66rem] tracking-wide text-white backdrop-blur-md transition-opacity duration-300"
+          // top-left in "fill" tiles (homepage), where a caption pill sits centred at the bottom
+          className={`pointer-events-none absolute left-2.5 flex items-center gap-1.5 rounded-full bg-black/40 px-2.5 py-1 text-[0.66rem] tracking-wide text-white backdrop-blur-md transition-opacity duration-300 ${
+            layout === "fill" ? "top-2.5" : "bottom-2.5"
+          }`}
           style={{ opacity: playing ? 0 : 1 }}
         >
           <svg width="8" height="9" viewBox="0 0 8 9" fill="currentColor" aria-hidden="true">
@@ -221,7 +225,9 @@ export function Lightbox({ items, index, openedId, onIndex, onClose }: LightboxP
               style={{
                 borderRadius: RADIUS,
                 aspectRatio: String(ratio),
-                width: `min(92vw, calc(84vh * ${ratio}))`,
+                // leave room for the top bar (date / place / Close) — on a phone a
+                // portrait video at 84vh slid up underneath it
+                width: `min(92vw, calc((100dvh - 190px) * ${ratio}), calc(84vh * ${ratio}))`,
               }}
             >
               {item.type === "image" ? (
@@ -237,14 +243,7 @@ export function Lightbox({ items, index, openedId, onIndex, onClose }: LightboxP
                   />
                 </>
               ) : (
-                <video
-                  src={item.src}
-                  poster={item.poster}
-                  autoPlay
-                  controls
-                  playsInline
-                  className="absolute inset-0 h-full w-full bg-black object-cover"
-                />
+                <LightboxVideo key={item.id} item={item} />
               )}
             </motion.div>
           )}
@@ -271,5 +270,76 @@ function NavButton({ side, onClick }: { side: "left" | "right"; onClick: () => v
         <path d={side === "left" ? "M9 2 4 7l5 5" : "M5 2l5 5-5 5"} />
       </svg>
     </button>
+  );
+}
+
+/**
+ * The viewer's video: our own minimal controls instead of the browser's —
+ * on an iPhone the native player UI covered the date, place and Close.
+ * Starts muted and looping (so it can autoplay); tap to pause / play,
+ * the speaker button turns sound on.
+ */
+function LightboxVideo({ item }: { item: MediaItem }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  const [paused, setPaused] = useState(false);
+  const [muted, setMuted] = useState(true);
+  useAutoplay(ref, [item.src]);
+
+  function togglePlay() {
+    const video = ref.current;
+    if (!video) return;
+    if (video.paused) video.play().catch(() => {});
+    else video.pause();
+  }
+
+  function toggleSound(e: MouseEvent) {
+    e.stopPropagation();
+    const video = ref.current;
+    if (!video) return;
+    video.muted = !video.muted;
+    setMuted(video.muted);
+    if (video.paused) video.play().catch(() => {});
+  }
+
+  return (
+    <>
+      <video
+        ref={ref}
+        src={item.src}
+        poster={item.poster}
+        autoPlay
+        muted
+        loop
+        playsInline
+        onClick={togglePlay}
+        onPlay={() => setPaused(false)}
+        onPause={() => setPaused(true)}
+        className="absolute inset-0 h-full w-full cursor-pointer bg-black object-cover"
+      />
+      {paused && (
+        <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-md">
+            <svg width="18" height="20" viewBox="0 0 8 9" fill="currentColor" aria-hidden="true">
+              <path d="M0 0.5v8l8-4z" />
+            </svg>
+          </span>
+        </span>
+      )}
+      <button
+        type="button"
+        onClick={toggleSound}
+        aria-label={muted ? "Turn sound on" : "Mute"}
+        className="absolute right-3 bottom-3 flex h-9 w-9 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-md transition-colors hover:bg-black/65"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <path d="M11 5 6 9H2v6h4l5 4z" fill="currentColor" stroke="none" />
+          {muted ? (
+            <path d="m22 9-6 6m0-6 6 6" />
+          ) : (
+            <path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14" />
+          )}
+        </svg>
+      </button>
+    </>
   );
 }

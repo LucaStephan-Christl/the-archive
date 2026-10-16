@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import Portal from "../components/Portal";
+import { useAutoplay } from "../lib/useAutoplay";
 import Experience from "../components/Experience";
 import Footer from "../components/Footer";
 import { destinations, type Destination as Trip } from "../data/trips";
@@ -12,6 +13,9 @@ export default function Destination() {
     slug && Object.hasOwn(destinations, slug) ? destinations[slug as Trip["slug"]] : undefined;
 
   const portalWrapperRef = useRef<HTMLDivElement>(null);
+  // iOS: guarantee muted autoplay (see useAutoplay)
+  const heroVideoRef = useRef<HTMLVideoElement>(null);
+  useAutoplay(heroVideoRef, [slug]);
   const reduceMotion = useReducedMotion();
   const { scrollYProgress } = useScroll({
     target: portalWrapperRef,
@@ -73,6 +77,7 @@ export default function Destination() {
                     into cover on portrait screens — a portrait clip on a phone
                     fills it naturally instead of leaving bands top and bottom. */}
                 <video
+                  ref={heroVideoRef}
                   className={`absolute inset-0 h-full w-full bg-center bg-no-repeat object-center ${
                     destination.heroFit === "contain"
                       ? "bg-contain object-contain portrait:bg-cover portrait:object-cover"

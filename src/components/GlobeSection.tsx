@@ -4,6 +4,7 @@ import createGlobe from "cobe";
 import { AnimatePresence, motion, useInView, useMotionValueEvent, useScroll } from "framer-motion";
 import Local from "./Local";
 import Reveal from "./Reveal";
+import { useAutoplay } from "../lib/useAutoplay";
 import { tripsOldestFirst, type Destination } from "../data/trips";
 
 const EASE = [0.4, 0, 0.2, 1] as const;
@@ -175,15 +176,7 @@ export default function GlobeSection() {
                     >
                       {/* the portrait preview cut — cropping the wide hero here showed a triptych's side panels */}
                       {(active.preview?.video ?? active.heroVideo) && (
-                        <video
-                          key={active.preview?.video ?? active.heroVideo}
-                          src={active.preview?.video ?? active.heroVideo}
-                          autoPlay
-                          muted
-                          loop
-                          playsInline
-                          className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
-                        />
+                        <CardVideo key={active.preview?.video ?? active.heroVideo} src={(active.preview?.video ?? active.heroVideo)!} />
                       )}
                     </div>
                     <div className="flex flex-col justify-center">
@@ -216,7 +209,8 @@ export default function GlobeSection() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -16 }}
                   transition={{ duration: 0.45, ease: EASE }}
-                  className="text-center md:text-left"
+                  // w-full: as a flex item it would otherwise shrink to its text and sit at the left
+                  className="w-full text-center md:text-left"
                 >
                   <p className="mb-2 text-[0.68rem] tracking-[0.14em] text-(--color-text-soft) uppercase">Starting from</p>
                   <p className="font-display text-[clamp(1.8rem,4vw,2.8rem)] leading-tight font-semibold tracking-tight">
@@ -232,5 +226,22 @@ export default function GlobeSection() {
         </div>
       </div>
     </>
+  );
+}
+
+/** The trip card's looping preview — muted autoplay that also works on iOS. */
+function CardVideo({ src }: { src: string }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  useAutoplay(ref, [src]);
+  return (
+    <video
+      ref={ref}
+      src={src}
+      autoPlay
+      muted
+      loop
+      playsInline
+      className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+    />
   );
 }

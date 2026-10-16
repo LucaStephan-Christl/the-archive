@@ -71,7 +71,8 @@ export default function Experience({ destination }: ExperienceProps) {
               <span key={`${city.en}-${i}`} className="flex items-baseline gap-2.5">
                 {i > 0 && <span className="text-(--color-accent)">→</span>}
                 <span className="text-(--color-text)">{city.en}</span>
-                <Local lang={city.lang} className="text-[0.8rem] text-(--color-text-soft)">{city.ja}</Local>
+                {/* local names make a long route wrap into a tall ragged block on a phone */}
+                <Local lang={city.lang} className="hidden text-[0.8rem] text-(--color-text-soft) sm:inline">{city.ja}</Local>
               </span>
             ))}
           </p>
@@ -111,34 +112,40 @@ export default function Experience({ destination }: ExperienceProps) {
             <div key={day.date} className="relative pt-9 pl-8 sm:pl-10">
               <span className="absolute top-9 left-[calc(0.65rem+0.5px)] h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-(--color-accent)" />
               <Reveal className="mb-4">
-                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                {/* the day number stays put on the left; everything else wraps beside it
+                    (with flex-wrap the number used to end up alone on its own line) */}
+                <div className="flex items-baseline gap-3">
                   {/* day of the month, big — then the month in the softer tone */}
-                  <span className="font-display text-lg font-semibold">{dayParts(day.date).day}</span>
-                  <span className="text-[0.74rem] tracking-[0.08em] uppercase text-(--color-text-soft)">
-                    {dayParts(day.date).month}
-                    {cities.length > 0 && " — "}
-                    {cities.map((city, i) => (
-                      <span key={city.en}>
-                        {i > 0 && " & "}
-                        <span className="text-(--color-text)">{city.en}</span>
-                        <Local lang={city.lang} className="ml-1.5 text-[0.8rem]">{city.ja}</Local>
+                  <span className="shrink-0 font-display text-lg font-semibold">{dayParts(day.date).day}</span>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                      <span className="text-[0.74rem] tracking-[0.08em] uppercase text-(--color-text-soft)">
+                        {dayParts(day.date).month}
+                        {cities.length > 0 && " — "}
+                        {cities.map((city, i) => (
+                          <span key={city.en}>
+                            {i > 0 && " & "}
+                            <span className="text-(--color-text)">{city.en}</span>
+                            <Local lang={city.lang} className="ml-1.5 text-[0.8rem]">{city.ja}</Local>
+                          </span>
+                        ))}
                       </span>
-                    ))}
-                  </span>
-                  <span className="text-[0.66rem] tracking-[0.08em] text-(--color-text-soft)/60 uppercase">
-                    {day.items.length} {day.items.length === 1 ? "frame" : "frames"}
-                  </span>
+                      <span className="text-[0.66rem] tracking-[0.08em] text-(--color-text-soft)/60 uppercase">
+                        {day.items.length} {day.items.length === 1 ? "frame" : "frames"}
+                      </span>
+                    </div>
+                    {places.length > 0 && (
+                      <p className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-[0.7rem] tracking-[0.06em] text-(--color-text-soft)">
+                        {places.map((place) => (
+                          <span key={place.en}>
+                            {place.en}
+                            <Local lang={place.lang} className="ml-1.5 text-(--color-text-soft)/70">{place.ja}</Local>
+                          </span>
+                        ))}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                {places.length > 0 && (
-                  <p className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-[0.7rem] tracking-[0.06em] text-(--color-text-soft)">
-                    {places.map((place) => (
-                      <span key={place.en}>
-                        {place.en}
-                        <Local lang={place.lang} className="ml-1.5 text-(--color-text-soft)/70">{place.ja}</Local>
-                      </span>
-                    ))}
-                  </p>
-                )}
               </Reveal>
               {/* amount 0: a day can be several screens tall on a phone — reveal it as soon as it arrives */}
               <Reveal amount={0}>

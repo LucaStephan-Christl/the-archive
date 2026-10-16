@@ -150,9 +150,21 @@ export default function ArchiveHome() {
         {FRAMES.map(({ tile, item }, i) => (
           <Reveal key={item.id} delay={(i % 4) * 70} className="relative aspect-[2/3]">
             <MediaTile item={item} layout="fill" onOpen={() => openFrame(item.id)} />
-            <span className="pointer-events-none absolute right-2.5 bottom-2.5 z-10 rounded-(--radius) bg-black/32 px-2.5 py-1.5 text-[0.72rem] text-white backdrop-blur-md backdrop-saturate-150">
-              {tile.caption}
-              <Local lang={item.lang} className="ml-1.5 text-white/75">{item.cityJa}</Local>
+            {/* place (+ local name) on one line, the date small beneath — "Kamakura — Jan 2026"
+                used to break mid-phrase on a phone */}
+            {/* centred: right-aligned pills looked off whenever their text wrapped */}
+            <span className="pointer-events-none absolute bottom-2 left-1/2 z-10 w-max max-w-[calc(100%-1rem)] -translate-x-1/2 rounded-[10px] bg-black/35 px-2.5 py-1.5 text-center text-white backdrop-blur-md backdrop-saturate-150 sm:bottom-2.5 sm:rounded-(--radius)">
+              <span className="block truncate text-[0.68rem] leading-tight font-medium sm:text-[0.72rem]">
+                {tile.caption.split(" — ")[0]}
+                <Local lang={item.lang} className="ml-1.5 font-normal text-white/70">
+                  {item.cityJa}
+                </Local>
+              </span>
+              {tile.caption.includes(" — ") && (
+                <span className="mt-0.5 block text-[0.58rem] leading-tight tracking-[0.08em] text-white/65 uppercase sm:text-[0.62rem]">
+                  {tile.caption.split(" — ")[1]}
+                </span>
+              )}
             </span>
           </Reveal>
         ))}
