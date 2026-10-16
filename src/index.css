@@ -128,12 +128,6 @@ body {
   transform: rotate(180deg);
 }
 
-/* Japanese vertical writing (tategaki): top-to-bottom, upright, unrotated —
-   unlike .vlabel, which turns Latin text on its side */
-.tategaki {
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
-}
 
 /* ---- trip map (TripMap.tsx, Leaflet) ---- */
 

@@ -12,6 +12,7 @@ interface Stop {
   name: string;
   /** local-script name, 伏見稲荷大社 */
   ja?: string;
+  lang?: string;
   city?: string;
   lat: number;
   lon: number;
@@ -28,7 +29,7 @@ function buildStops(items: MediaItem[]): Stop[] {
     if (item.lat === undefined || item.lon === undefined) continue;
     const name = item.place ?? item.city ?? "Unknown";
     const key = `${name}|${item.city ?? ""}`;
-    const stop = stops.get(key) ?? { key, name, ja: localLabel(item), city: item.city, lat: 0, lon: 0, items: [] };
+    const stop = stops.get(key) ?? { key, name, ja: localLabel(item), lang: item.lang, city: item.city, lat: 0, lon: 0, items: [] };
     stop.items.push(item);
     stops.set(key, stop);
   }
@@ -138,7 +139,7 @@ export default function TripMap({ items, accent, onOpen }: TripMapProps) {
       L.marker([stop.lat, stop.lon], { icon, title: stop.name, riseOnHover: true })
         .addTo(map)
         .bindTooltip(
-          `${stop.name}${stop.ja ? ` <span lang="ja" class="trip-tooltip__ja">${stop.ja}</span>` : ""}` +
+          `${stop.name}${stop.ja ? ` <span lang="${stop.lang ?? "ja"}" class="trip-tooltip__ja">${stop.ja}</span>` : ""}` +
             `${stop.city && stop.city !== stop.name ? `, ${stop.city}` : ""} · ${stopDates(stop)}`,
           { direction: "top", offset: [0, -26], className: "trip-tooltip" },
         )
@@ -206,7 +207,7 @@ export default function TripMap({ items, accent, onOpen }: TripMapProps) {
             <div className="flex items-start justify-between gap-4 px-4 pt-4 pb-3">
               <div>
                 <p className="font-display text-lg leading-tight font-semibold">{selected.name}</p>
-                <Local className="mt-0.5 block text-[0.95rem] text-(--color-text-soft)">{selected.ja}</Local>
+                <Local lang={selected.lang} className="mt-0.5 block text-[0.95rem] text-(--color-text-soft)">{selected.ja}</Local>
                 <p className="mt-1 text-[0.66rem] tracking-[0.12em] text-(--color-text-soft) uppercase">
                   {[selected.city !== selected.name && selected.city, stopDates(selected), `${selected.items.length} frames`]
                     .filter(Boolean)

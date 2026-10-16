@@ -2,6 +2,11 @@
 // the poster is its first frame, shown while the video loads.
 import japanHero from "../assets/videos/japan/japan-hero-poster.webp";
 import japanHeroVideo from "../assets/videos/japan/japan-hero.mp4";
+import { getTripHero } from "./media";
+
+// Encoded by `yarn media` from media/iceland/hero/ — until a clip is there,
+// the page keeps its gradient hero.
+const icelandHero = getTripHero("iceland");
 export type DestinationKind = "circle" | "cross";
 
 export interface Tile {
@@ -38,8 +43,6 @@ export interface Destination {
     name: string;
     /** headline translation, under the English one */
     headline?: string;
-    /** vertical line of text on the destination hero */
-    hero?: string;
   };
   /** Optional place name per capture date, shown next to it in the timeline
    * ("Jan 16 — Kyoto"). Days come from the photos themselves (`yarn media`). */
@@ -66,7 +69,6 @@ export const destinations: Record<"japan" | "iceland", Destination> = {
       lang: "ja",
       name: "日本",
       headline: "東京から大阪へ",
-      hero: "日本・二〇二六年一月",
     },
     dayLabels: {
       // "2026-01-16": "Kyoto",
@@ -99,16 +101,22 @@ export const destinations: Record<"japan" | "iceland", Destination> = {
     vBottom: "REYKJAVIK / AKUREYRI / HUSAVIK",
     portalBg:
       "radial-gradient(circle at 32% 30%, #6fb0c2 0%, #29616e 40%, #0a1518 78%)",
-    heroBg:
-      "radial-gradient(120% 90% at 70% 20%, #a9dce7 0%, #5fa3b8 32%, #29616e 62%, #0a1518 100%)",
-    heroFit: "cover",
+    heroBg: icelandHero
+      ? `url(${icelandHero.poster})`
+      : "radial-gradient(120% 90% at 70% 20%, #a9dce7 0%, #5fa3b8 32%, #29616e 62%, #0a1518 100%)",
+    heroVideo: icelandHero?.video,
+    // portrait clips letterbox (with the accent glow either side), landscape ones fill the frame
+    heroFit: icelandHero && icelandHero.height > icelandHero.width ? "contain" : "cover",
     accent: "#5fa3b8",
-    eyebrow: "Iceland, Mar & May 2026",
+    eyebrow: "Iceland, Apr & May 2026",
     headline: "Ice, ash and water.",
     local: {
       lang: "is",
       name: "Ísland",
       headline: "Ís, aska og vatn.",
+    },
+    dayLabels: {
+      // "2026-03-03": "Reykjavik",
     },
     days: [
       {
@@ -149,4 +157,8 @@ export const homeGrid: HomeTile[] = [
   { trip: "japan", id: "p1011195-78023f", caption: "Nara — Jan 2026" }, // deer
   { trip: "japan", id: "p1011559-b3fe3c", caption: "Osaka — Jan 2026" }, // Osaka Castle
   { trip: "japan", id: "p1011799-74e964", caption: "Tokyo — Jan 2026" }, // Shibuya from above
+  { trip: "iceland", id: "img-0372-3791c6", caption: "Kirkjufell — Apr 2026" },
+  { trip: "iceland", id: "img-0526-79fe0c", caption: "Lóndrangar — Apr 2026" }, // video
+  { trip: "iceland", id: "p1022344-e02595", caption: "Hafnarhólmi — May 2026" }, // puffin
+  { trip: "iceland", id: "p1022363-f1f509", caption: "Múlagljúfur — May 2026" },
 ];

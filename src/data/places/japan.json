@@ -1,5 +1,6 @@
 {
   "_readme": "Where each photo was taken, for the timeline labels, route and map. Read by `yarn media` (re-run after editing — it's quick, nothing is re-encoded). Each place covers photos taken from `from` (inclusive) to `to` (exclusive), local time, and/or specific `files`. Photos with their own GPS keep their exact position but still take the place's name. Places without lat/lon only label the city (not pinned on the map). Photos outside every place get no location. `ja` is the name in Japanese; `cities` maps each city to its Japanese name.",
+  "lang": "ja",
   "cities": {
     "Tokyo": "東京",
     "Kamakura": "鎌倉",

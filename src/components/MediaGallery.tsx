@@ -152,7 +152,7 @@ export function Lightbox({ items, index, openedId, onIndex, onClose }: LightboxP
                 {String(index + 1).padStart(2, "0")} / {String(items.length).padStart(2, "0")}
                 <span className="ml-4 text-(--color-text)">{formatTakenAt(item)}</span>
                 {placeLabel(item) && <span className="ml-4 text-(--color-text)">{placeLabel(item)}</span>}
-                <Local className="ml-2.5 text-[0.8rem] text-(--color-text-soft)">{localLabel(item)}</Local>
+                <Local lang={item.lang} className="ml-2.5 text-[0.8rem] text-(--color-text-soft)">{localLabel(item)}</Local>
               </span>
               <button
                 type="button"

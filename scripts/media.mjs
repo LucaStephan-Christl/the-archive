@@ -5,8 +5,9 @@
  *   media/<trip>/*            ← drop originals here (any mix, any names; gitignored)
  *   public/media/<trip>/*     → generated web versions (resized webp / mp4 + posters)
  *   src/data/media/<trip>.json → generated manifest the timeline renders from
+ *   media/<trip>/hero/*         ← optional: one raw clip for the destination hero
  *   src/data/places/<trip>.json ← optional hand-written places (names + map
- *                                 positions by time range) — see its _readme
+ *                                 positions by time range / GPS radius) — see its _readme
  *
  * Usage:  yarn media            (all trips)
  *         yarn media japan      (one trip)
@@ -55,6 +56,7 @@ const GRID_EDGE = 1400;
 const FULL_EDGE = 2800;
 const VIDEO_EDGE = 1920;
 const THUMB_EDGE = 240;
+const HERO_EDGE = 2560;
 
 async function main() {
   await fs.mkdir(IN_DIR, { recursive: true });
@@ -83,7 +85,9 @@ async function processTrip(trip) {
   const timeZone = config.timezone ?? TIMEZONES[trip] ?? "UTC";
   const clockShift = config.clockShiftHours ?? {};
 
-  const files = (await fs.readdir(srcDir))
+  const files = (await fs.readdir(srcDir, { withFileTypes: true }))
+    .filter((d) => d.isFile())
+    .map((d) => d.name)
     .filter((f) => !f.startsWith(".") && f !== "trip.json")
     .filter((f) => {
       const ext = path.extname(f).toLowerCase();
@@ -130,6 +134,10 @@ async function processTrip(trip) {
   }
 
   repairDates(items);
+  // re-saved copies with no numbered neighbours to estimate from (e.g. UUID
+  // filenames from a phone export): their stamp is often the edit time —
+  // keep the day, but don't show a time
+  for (const item of items) if (!item._date.trusted && !item._date.fallback && !item.dateEstimated) item.dateEstimated = true;
   const placesFile = await readJson(path.join(PLACES_DIR, `${trip}.json`));
   assignPlaces(items, placesFile?.places ?? [], placesFile?.cities);
   for (const item of items) {
@@ -139,8 +147,10 @@ async function processTrip(trip) {
   }
 
   items.sort((a, b) => a.takenAt.localeCompare(b.takenAt) || a.id.localeCompare(b.id));
-  await pruneOrphans(outDir, items);
-  await fs.writeFile(manifestPath, JSON.stringify({ trip, items }, null, 2) + "\n");
+  const hero = await processHero(srcDir, outDir, trip, previous?.hero);
+  await pruneOrphans(outDir, items, hero);
+  const manifest = { trip, lang: placesFile?.lang, hero, items };
+  await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
   console.log(`  → ${path.relative(ROOT, manifestPath)} (${items.length} items)`);
 }
 
@@ -219,7 +229,7 @@ async function readVideoDate(srcPath, timeZone) {
   const info = await probe(srcPath);
   const loc = info.match(/location(?:\.ISO6709)?\s*:\s*([+-]\d+(?:\.\d+)?)([+-]\d+(?:\.\d+)?)/);
   const gps = loc ? [Number(loc[1]), Number(loc[2])] : null;
-  const apple = info.match(/com\.apple\.quicktime\.creationdate\s*:\s*(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d[+-]\d\d:?\d\d)/);
+  const apple = info.match(/com\.apple\.quicktime\.creationdate\s*:\s*(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:[+-]\d\d:?\d\d|Z))/);
   const qt = info.match(/creation_time\s*:\s*(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z)/);
   if (apple) return { takenAt: utcToZone(new Date(apple[1].replace(/([+-]\d\d)(\d\d)$/, "$1:$2")), timeZone), trusted: true, fallback: false, gps };
   if (qt) return { takenAt: utcToZone(new Date(qt[1]), timeZone), trusted: true, fallback: false, gps };
@@ -235,17 +245,19 @@ async function readVideoDate(srcPath, timeZone) {
 function assignPlaces(items, places, cities = {}) {
   for (const item of items) {
     const t = item.takenAt.slice(0, 16);
+    const gps = item._date.gps;
     const place =
       places.find((p) => p.files?.includes(item.source)) ??
-      places.find((p) => p.from && p.to && t >= p.from && t < p.to);
-    const gps = item._date.gps;
+      places.find((p) => p.from && p.to && t >= p.from && t < p.to) ??
+      (gps ? nearestPlace(places, gps) : undefined);
 
     if (place) {
       item.city = place.city;
       if (cities[place.city]) item.cityJa = cities[place.city];
       if (place.name !== place.city) {
         item.place = place.name;
-        if (place.ja) item.placeJa = place.ja;
+        const local = place.local ?? place.ja;
+        if (local) item.placeJa = local;
       }
     }
     if (gps) {
@@ -257,6 +269,93 @@ function assignPlaces(items, places, cities = {}) {
       item.exact = false;
     }
   }
+}
+
+/**
+ * For a photo with its own GPS that no time range claimed: the closest place
+ * whose `radiusKm` it falls inside — so a small radius on a landmark
+ * (Hallgrímskirkja, 0.5 km) beats the city around it (Reykjavík, 20 km).
+ */
+function nearestPlace(places, [lat, lon]) {
+  let best;
+  let bestKm = Infinity;
+  for (const p of places) {
+    if (p.lat === undefined || !p.radiusKm) continue;
+    const km = distanceKm(lat, lon, p.lat, p.lon);
+    if (km <= p.radiusKm && km < bestKm) {
+      best = p;
+      bestKm = km;
+    }
+  }
+  return best;
+}
+
+function distanceKm(lat1, lon1, lat2, lon2) {
+  const rad = Math.PI / 180;
+  const a =
+    Math.sin(((lat2 - lat1) * rad) / 2) ** 2 +
+    Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(((lon2 - lon1) * rad) / 2) ** 2;
+  return 12742 * Math.asin(Math.sqrt(a));
+}
+
+// ---------------------------------------------------------------- hero video
+
+/**
+ * media/<trip>/hero/ — drop one raw clip in; it's encoded like the Japan
+ * hero: long edge 2560 (sharp on a Retina full-height hero), up to 30fps,
+ * CRF 23, no audio, HDR tone-mapped, plus a first-frame poster that
+ * shows while it loads. Re-encodes only when the clip changes.
+ */
+async function processHero(srcDir, outDir, trip, previous) {
+  const heroDir = path.join(srcDir, "hero");
+  const clip = (await fs.readdir(heroDir).catch(() => []))
+    .filter((f) => !f.startsWith(".") && VIDEO_EXT.has(path.extname(f).toLowerCase()))
+    .sort()[0];
+  if (!clip) return undefined;
+
+  const srcPath = path.join(heroDir, clip);
+  const stat = await fs.stat(srcPath);
+  const fingerprint = `${clip}-${stat.size}-${Math.round(stat.mtimeMs)}-v2`;
+  const mp4 = path.join(outDir, "hero.mp4");
+  const poster = path.join(outDir, "hero-poster.webp");
+  const exists = async (f) => fs.access(f).then(() => true, () => false);
+  if (previous?.fingerprint === fingerprint && (await exists(mp4)) && (await exists(poster))) return previous;
+
+  console.log(`  … hero: encoding ${clip}`);
+  const info = await probe(srcPath);
+  const isHdr = /arib-std-b67|smpte2084/.test(info);
+  const tonemap =
+    "zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709," +
+    "tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,";
+  const scale = `scale='if(gte(iw,ih),min(${HERO_EDGE},iw),-2)':'if(gte(iw,ih),-2,min(${HERO_EDGE},ih))':flags=lanczos`;
+  const srcFps = parseFloat(info.match(/, ([\d.]+) fps/)?.[1] ?? "0");
+  // 30fps is plenty for a background loop and roughly halves the file
+  const vf = `${isHdr ? tonemap : ""}${scale}${srcFps > 30 ? ",fps=30" : ""},format=yuv420p`;
+
+  await run(ffmpegPath, [
+    "-hide_banner", "-loglevel", "error", "-y", "-i", srcPath,
+    "-an", "-vf", vf,
+    "-c:v", "libx264", "-preset", "slow", "-crf", "23", "-profile:v", "high",
+    "-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709",
+    "-movflags", "+faststart",
+    mp4,
+  ], { maxBuffer: 1 << 26 });
+  await run(ffmpegPath, [
+    "-hide_banner", "-loglevel", "error", "-y", "-i", mp4,
+    "-frames:v", "1", "-c:v", "libwebp", "-quality", "85", poster,
+  ]);
+
+  const out = await probe(mp4);
+  const [, w, h] = out.match(/Video:.*?(\d{2,5})x(\d{2,5})/) ?? [];
+  const { size } = await fs.stat(mp4);
+  console.log(`  ✓ hero: ${w}×${h}, ${(size / 1e6).toFixed(1)} MB`);
+  return {
+    video: `/media/${trip}/hero.mp4`,
+    poster: `/media/${trip}/hero-poster.webp`,
+    width: +w,
+    height: +h,
+    fingerprint,
+  };
 }
 
 // ---------------------------------------------------------------- images
@@ -417,8 +516,12 @@ async function outputsExist(outDir, item) {
   return checks.every(Boolean);
 }
 
-async function pruneOrphans(outDir, items) {
-  const keep = new Set(items.flatMap((i) => [i.src, i.full, i.poster, i.thumb]).filter(Boolean).map((p) => path.basename(p)));
+async function pruneOrphans(outDir, items, hero) {
+  const keep = new Set(
+    [...items.flatMap((i) => [i.src, i.full, i.poster, i.thumb]), hero?.video, hero?.poster]
+      .filter(Boolean)
+      .map((p) => path.basename(p)),
+  );
   for (const f of await fs.readdir(outDir)) {
     if (!keep.has(f)) await fs.rm(path.join(outDir, f), { force: true });
   }

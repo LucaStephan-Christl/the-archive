@@ -1,0 +1,53 @@
+{
+  "_readme": "Where each photo was taken, for the timeline labels, route and map. Read by `yarn media` (re-run after editing — it's quick, nothing is re-encoded). A photo gets a place by (1) its filename in a place's `files`, else (2) its capture time inside a place's [`from`, `to`) range (local time = UTC in Iceland), else (3) its own GPS within a place's `radiusKm`. Photos with their own GPS keep their exact map position. Places without lat/lon only label the region (not pinned). `local` is the name in Icelandic where it differs from the English; `cities` maps each region to its Icelandic name.",
+  "lang": "is",
+  "cities": {
+    "Reykjavik": "Reykjavík",
+    "West Iceland": "Vesturland",
+    "Westfjords": "Vestfirðir",
+    "North Iceland": "Norðurland",
+    "Husavik": "Húsavík",
+    "East Iceland": "Austurland",
+    "South Iceland": "Suðurland"
+  },
+  "places": [
+    { "name": "Reykjavik", "local": "Reykjavík", "city": "Reykjavik", "lat": 64.1466, "lon": -21.9426, "from": "2026-04-02T00:00", "to": "2026-04-03T10:00" },
+    { "name": "Borgarnes", "city": "West Iceland", "lat": 64.5383, "lon": -21.9206, "from": "2026-04-03T10:00", "to": "2026-04-03T12:30" },
+    { "name": "Gerðuberg", "city": "Snæfellsnes", "lat": 64.8619, "lon": -22.359, "from": "2026-04-03T12:30", "to": "2026-04-03T14:30" },
+    { "name": "Snæfellsnes", "city": "Snæfellsnes", "from": "2026-04-03T14:30", "to": "2026-04-03T16:30", "files": ["d6034928-89e9-42c2-86e8-477a6abaa15b.jpeg", "d4b45fb0-e558-4d99-8fc9-6268c783d256.jpeg", "d74946f6-133e-4116-a2ea-c725b49cd4a2.jpeg", "7fb21676-9151-4c85-beae-9a32db90606a.jpeg"] },
+    { "name": "Kirkjufell", "city": "Snæfellsnes", "lat": 64.9417, "lon": -23.3058, "from": "2026-04-03T16:30", "to": "2026-04-04T06:00" },
+
+    { "name": "Hólmavík", "city": "Westfjords", "lat": 65.7058, "lon": -21.6765, "files": ["IMG_0420.jpeg"] },
+    { "name": "Strandir", "city": "Westfjords", "from": "2026-04-04T06:00", "to": "2026-04-05T06:00" },
+
+    { "name": "Hellissandur", "city": "Snæfellsnes", "lat": 64.9136, "lon": -23.8807, "from": "2026-04-05T06:00", "to": "2026-04-05T12:00" },
+    { "name": "Skarðsvík", "city": "Snæfellsnes", "lat": 64.8836, "lon": -23.9667, "from": "2026-04-05T12:00", "to": "2026-04-05T12:50" },
+    { "name": "Saxhóll", "city": "Snæfellsnes", "lat": 64.8559, "lon": -23.927, "from": "2026-04-05T12:50", "to": "2026-04-05T13:15" },
+    { "name": "Lóndrangar", "city": "Snæfellsnes", "lat": 64.7343, "lon": -23.7756, "from": "2026-04-05T13:15", "to": "2026-04-05T14:00" },
+    { "name": "Rauðfeldsgjá", "city": "Snæfellsnes", "lat": 64.7974, "lon": -23.6291, "from": "2026-04-05T14:00", "to": "2026-04-05T15:00" },
+    { "name": "Ytri Tunga", "city": "Snæfellsnes", "lat": 64.8037, "lon": -23.0849, "from": "2026-04-05T15:00", "to": "2026-04-06T06:00" },
+
+    { "name": "Grábrók", "city": "West Iceland", "lat": 64.7728, "lon": -21.5394, "from": "2026-05-23T12:00", "to": "2026-05-23T17:00" },
+    { "name": "Dalir", "city": "West Iceland", "from": "2026-05-23T17:00", "to": "2026-05-24T06:00" },
+
+    { "name": "Northwest Iceland", "local": "Norðurland vestra", "city": "North Iceland", "from": "2026-05-24T06:00", "to": "2026-05-24T20:00" },
+    { "name": "Kolugljúfur", "city": "North Iceland", "lat": 65.3289, "lon": -20.5286, "from": "2026-05-24T20:00", "to": "2026-05-25T06:00" },
+    { "name": "Glaumbær", "city": "North Iceland", "lat": 65.6108, "lon": -19.505, "from": "2026-05-25T06:00", "to": "2026-05-25T11:55" },
+    { "name": "Sauðárkrókur", "city": "North Iceland", "lat": 65.7461, "lon": -19.639, "from": "2026-05-25T11:55", "to": "2026-05-25T14:50" },
+    { "name": "Eyjafjörður", "city": "Akureyri", "lat": 65.7, "lon": -18.11, "from": "2026-05-25T14:50", "to": "2026-05-25T20:00" },
+    { "name": "Godafoss", "local": "Goðafoss", "city": "North Iceland", "lat": 65.6828, "lon": -17.5502, "from": "2026-05-25T20:00", "to": "2026-05-26T06:00" },
+    { "name": "Hverir", "city": "North Iceland", "lat": 65.6413, "lon": -16.8085, "from": "2026-05-26T06:00", "to": "2026-05-26T14:30" },
+    { "name": "Skútustaðir Pseudocraters", "local": "Skútustaðagígar", "city": "North Iceland", "lat": 65.5714, "lon": -17.036, "from": "2026-05-26T14:30", "to": "2026-05-26T15:02" },
+    { "name": "Lake Mývatn", "local": "Mývatn", "city": "North Iceland", "lat": 65.6448, "lon": -16.9119, "from": "2026-05-26T15:02", "to": "2026-05-26T16:00" },
+    { "name": "Húsavík Harbour", "local": "Húsavíkurhöfn", "city": "Husavik", "lat": 66.0461, "lon": -17.3453, "from": "2026-05-26T16:00", "to": "2026-05-26T20:00" },
+
+    { "name": "Möðrudalur", "city": "East Iceland", "lat": 65.3747, "lon": -15.8823, "from": "2026-05-26T20:00", "to": "2026-05-27T12:30" },
+    { "name": "Stuðlagil", "city": "East Iceland", "lat": 65.1677, "lon": -15.3074, "from": "2026-05-27T12:30", "to": "2026-05-27T17:00" },
+    { "name": "Puffin colony", "local": "Hafnarhólmi", "city": "East Iceland", "lat": 65.5348, "lon": -13.8196, "from": "2026-05-27T17:00", "to": "2026-05-28T06:00" },
+    { "name": "Eastfjords", "local": "Austfirðir", "city": "East Iceland", "from": "2026-05-28T06:00", "to": "2026-05-29T06:00" },
+
+    { "name": "Múlagljúfur", "city": "South Iceland", "lat": 63.9873, "lon": -16.3878, "from": "2026-05-29T06:00", "to": "2026-05-30T06:00" },
+    { "name": "Fjaðrárgljúfur", "city": "South Iceland", "lat": 63.7713, "lon": -18.172, "from": "2026-05-30T06:00", "to": "2026-05-31T06:00" },
+    { "name": "Reykjadalur", "city": "South Iceland", "lat": 64.0285, "lon": -21.2121, "from": "2026-05-31T06:00", "to": "2026-06-01T06:00" }
+  ]
+}

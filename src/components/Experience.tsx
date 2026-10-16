@@ -71,12 +71,33 @@ export default function Experience({ destination }: ExperienceProps) {
               <span key={`${city.en}-${i}`} className="flex items-baseline gap-2.5">
                 {i > 0 && <span className="text-(--color-accent)">→</span>}
                 <span className="text-(--color-text)">{city.en}</span>
-                <Local className="text-[0.8rem] text-(--color-text-soft)">{city.ja}</Local>
+                <Local lang={city.lang} className="text-[0.8rem] text-(--color-text-soft)">{city.ja}</Local>
               </span>
             ))}
           </p>
         )}
       </div>
+
+      {media.some((m) => m.lat !== undefined) && (
+        <div ref={mapSectionRef} className="px-8 pb-6">
+          <Reveal className="mb-5 flex flex-wrap items-baseline justify-between gap-3">
+            <div className="flex items-baseline gap-2.5">
+              <span className="text-[0.72rem] text-(--color-accent)">Map</span>
+              <span className="text-[0.72rem] tracking-[0.14em] uppercase text-(--color-text-soft)">
+                Where every frame was taken
+              </span>
+            </div>
+          </Reveal>
+          {/* Leaflet (and its tiles) only load once the map is near the viewport */}
+          {mapInView ? (
+            <Suspense fallback={<div className="h-[72vh] min-h-[420px] rounded-(--radius) bg-(--color-text)/5" />}>
+              <TripMap items={media} accent={destination.accent} onOpen={openFromMap} />
+            </Suspense>
+          ) : (
+            <div className="h-[72vh] min-h-[420px] rounded-(--radius) bg-(--color-text)/5" />
+          )}
+        </div>
+      )}
 
       {media.length > 0 ? (
         <div className="relative px-8 pb-20">
@@ -101,7 +122,7 @@ export default function Experience({ destination }: ExperienceProps) {
                       <span key={city.en}>
                         {i > 0 && " & "}
                         <span className="text-(--color-text)">{city.en}</span>
-                        <Local className="ml-1.5 text-[0.8rem]">{city.ja}</Local>
+                        <Local lang={city.lang} className="ml-1.5 text-[0.8rem]">{city.ja}</Local>
                       </span>
                     ))}
                   </span>
@@ -114,7 +135,7 @@ export default function Experience({ destination }: ExperienceProps) {
                     {places.map((place) => (
                       <span key={place.en}>
                         {place.en}
-                        <Local className="ml-1.5 text-(--color-text-soft)/70">{place.ja}</Local>
+                        <Local lang={place.lang} className="ml-1.5 text-(--color-text-soft)/70">{place.ja}</Local>
                       </span>
                     ))}
                   </p>
@@ -133,30 +154,6 @@ export default function Experience({ destination }: ExperienceProps) {
             </div>
             );
           })}
-
-          {media.some((m) => m.lat !== undefined) && (
-            <div ref={mapSectionRef} className="pt-20">
-              <Reveal className="mb-5 flex flex-wrap items-baseline justify-between gap-3">
-                <div className="flex items-baseline gap-2.5">
-                  <span className="text-[0.72rem] text-(--color-accent)">Map</span>
-                  <span className="text-[0.72rem] tracking-[0.14em] uppercase text-(--color-text-soft)">
-                    Where every frame was taken
-                  </span>
-                </div>
-                <span className="text-[0.66rem] tracking-[0.08em] text-(--color-text-soft)/70 uppercase">
-                  Photo = place · dot = exact GPS · click the map to scroll-zoom
-                </span>
-              </Reveal>
-              {/* Leaflet (and its tiles) only load once the map is near the viewport */}
-              {mapInView ? (
-                <Suspense fallback={<div className="h-[72vh] min-h-[420px] rounded-(--radius) bg-(--color-text)/5" />}>
-                  <TripMap items={media} accent={destination.accent} onOpen={openFromMap} />
-                </Suspense>
-              ) : (
-                <div className="h-[72vh] min-h-[420px] rounded-(--radius) bg-(--color-text)/5" />
-              )}
-            </div>
-          )}
 
           <Lightbox
             items={media}

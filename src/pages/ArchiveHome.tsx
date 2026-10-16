@@ -124,7 +124,7 @@ export default function ArchiveHome() {
             <MediaTile item={item} layout="fill" onOpen={() => openFrame(item.id)} />
             <span className="pointer-events-none absolute right-2.5 bottom-2.5 z-10 rounded-(--radius) bg-black/32 px-2.5 py-1.5 text-[0.72rem] text-white backdrop-blur-md backdrop-saturate-150">
               {tile.caption}
-              <Local className="ml-1.5 text-white/75">{item.cityJa}</Local>
+              <Local lang={item.lang} className="ml-1.5 text-white/75">{item.cityJa}</Local>
             </span>
           </Reveal>
         ))}

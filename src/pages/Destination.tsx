@@ -3,6 +3,7 @@ import { Link, Navigate, useParams } from "react-router-dom";
 import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import Portal from "../components/Portal";
 import Experience from "../components/Experience";
+import Footer from "../components/Footer";
 import { destinations } from "../data/trips";
 
 export default function Destination() {
@@ -54,6 +55,17 @@ export default function Destination() {
             // on cover independently — a small circle reads better filled.
             <motion.div className="absolute inset-0 p-3 sm:p-6" style={{ scale: heroScale }}>
               <div className="relative h-full w-full overflow-hidden rounded-(--radius) bg-(--color-bg)">
+                {/* soft glow in the letterbox around a portrait clip — a plain
+                    gradient (smooth at any size, no per-frame cost) */}
+                {destination.heroFit === "contain" && (
+                  <div
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-0 opacity-25"
+                    style={{
+                      background: `radial-gradient(ellipse 60% 90% at 50% 50%, ${destination.accent} 0%, transparent 100%)`,
+                    }}
+                  />
+                )}
                 {/* heroBg (the poster frame) sits behind the video with the
                     same fit, so it shows instead of black until playback starts */}
                 <video
@@ -102,15 +114,6 @@ export default function Destination() {
           >
             {destination.vBottom}
           </motion.span>
-          {destination.local?.hero && (
-            <motion.span
-              lang={destination.local.lang}
-              className="tategaki absolute top-1/2 right-7 -translate-y-1/2 font-jp text-[1.05rem] tracking-[0.35em] text-(--color-landing-ink)"
-              style={{ opacity: labelOpacity }}
-            >
-              {destination.local.hero}
-            </motion.span>
-          )}
           <motion.div
             className="absolute top-7 right-7"
             style={{ opacity: labelOpacity }}
@@ -134,6 +137,7 @@ export default function Destination() {
       </div>
 
       <Experience destination={destination} />
+      <Footer />
     </div>
   );
 }

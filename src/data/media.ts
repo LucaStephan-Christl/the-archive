@@ -24,10 +24,12 @@ export interface MediaItem {
   dateEstimated?: boolean;
   /** from src/data/places/<trip>.json — "Fushimi Inari" (absent when only the city is known) */
   place?: string;
-  /** the place's name in the local script, "伏見稲荷大社" */
+  /** the place's name in the local language/script, "伏見稲荷大社" / "Bláa lónið" (see the manifest's `lang`) */
   placeJa?: string;
   city?: string;
   cityJa?: string;
+  /** language of placeJa / cityJa — copied from the trip's manifest */
+  lang?: string;
   lat?: number;
   lon?: number;
   /** true: the photo's own GPS; false: the place's position (the photo itself had none) */
@@ -38,6 +40,8 @@ export interface MediaItem {
 export interface Named {
   en: string;
   ja?: string;
+  /** language of `ja` */
+  lang?: string;
 }
 
 /** "Fushimi Inari, Kyoto" / "Kyoto" / "" */
@@ -57,8 +61,9 @@ function inOrder(names: (Named | undefined)[]) {
   return [...seen.values()];
 }
 
-const cityOf = (i: MediaItem): Named | undefined => (i.city ? { en: i.city, ja: i.cityJa } : undefined);
-const placeOf = (i: MediaItem): Named | undefined => (i.place ? { en: i.place, ja: i.placeJa } : undefined);
+const cityOf = (i: MediaItem): Named | undefined => (i.city ? { en: i.city, ja: i.cityJa, lang: i.lang } : undefined);
+const placeOf = (i: MediaItem): Named | undefined =>
+  i.place ? { en: i.place, ja: i.placeJa, lang: i.lang } : undefined;
 
 export function dayCities(items: MediaItem[]) {
   return inOrder(items.map(cityOf));
@@ -68,13 +73,23 @@ export function dayPlaces(items: MediaItem[]) {
   return inOrder(items.map(placeOf));
 }
 
-/** Cities in travel order, collapsing consecutive repeats: Tokyo → Kamakura → Kyoto → … */
+/**
+ * The stops in travel order, without the back-and-forth of day trips:
+ * Tokyo → Kamakura → Tokyo → Kyoto becomes Tokyo → Kamakura → Kyoto — the
+ * return to the city you just came from is dropped, the day trip is kept.
+ */
 export function route(items: MediaItem[]) {
-  const stops: Named[] = [];
+  const visits: Named[] = [];
   for (const item of items) {
     const city = cityOf(item);
-    if (city && stops.at(-1)?.en !== city.en) stops.push(city);
+    if (city && visits.at(-1)?.en !== city.en) visits.push(city);
   }
+  const stops: Named[] = [];
+  visits.forEach((city, i) => {
+    // back at base after a day trip (and not the trip's final stop)
+    const returning = i >= 2 && i < visits.length - 1 && visits[i - 2].en === city.en;
+    if (!returning && stops.at(-1)?.en !== city.en) stops.push(city);
+  });
   return stops;
 }
 
@@ -84,17 +99,45 @@ export interface MediaDay {
   items: MediaItem[];
 }
 
-const manifests = import.meta.glob<{ trip: string; items: MediaItem[] }>("./media/*.json", {
+/** The destination hero clip, encoded by `yarn media` from media/<trip>/hero/. */
+export interface TripHero {
+  video: string;
+  /** first frame, shown while the video loads */
+  poster: string;
+  width: number;
+  height: number;
+}
+
+interface Manifest {
+  trip: string;
+  /** BCP-47 tag of the local names (placeJa / cityJa), e.g. "ja", "is" */
+  lang?: string;
+  hero?: TripHero;
+  items: MediaItem[];
+}
+
+const manifests = import.meta.glob<Manifest>("./media/*.json", {
   eager: true,
   import: "default",
 });
 
-const byTrip: Record<string, MediaItem[]> = Object.fromEntries(
-  Object.values(manifests).map((m) => [m.trip, m.items]),
+const byTrip: Record<string, Manifest> = Object.fromEntries(
+  Object.values(manifests).map((m) => [
+    m.trip,
+    { ...m, items: m.lang ? m.items.map((item) => ({ ...item, lang: m.lang })) : m.items },
+  ]),
 );
 
 export function getTripMedia(slug: string): MediaItem[] {
-  return byTrip[slug] ?? [];
+  return byTrip[slug]?.items ?? [];
+}
+
+export function getTripHero(slug: string): TripHero | undefined {
+  return byTrip[slug]?.hero;
+}
+
+export function getTripLang(slug: string): string | undefined {
+  return byTrip[slug]?.lang;
 }
 
 /**
