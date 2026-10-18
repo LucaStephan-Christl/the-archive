@@ -57,13 +57,31 @@ function useNow() {
   return now;
 }
 
+/**
+ * Fades and rises into place as it rolls up into view (a little above the
+ * bottom edge), and back out if you scroll back down past it.
+ */
+function FadeIn({ children, className, delay = 0 }: { children: ReactNode; className?: string; delay?: number }) {
+  return (
+    <motion.div
+      className={className}
+      initial={{ opacity: 0, y: 28, filter: "blur(6px)" }}
+      whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+      viewport={{ amount: 0.5, margin: "0px 0px -12% 0px" }}
+      transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1], delay }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
 /** One credit: a small role line over a larger name, centred like film credits. */
 function Credit({ role, children }: { role: string; children: ReactNode }) {
   return (
-    <div className="mb-16 text-center sm:mb-20">
+    <FadeIn className="mb-16 text-center sm:mb-20">
       <p className="mb-3 text-[0.66rem] tracking-[0.28em] text-(--color-text-soft) uppercase">{role}</p>
       <div className="font-display text-[clamp(1.35rem,3vw,2.1rem)] leading-tight font-medium tracking-tight">{children}</div>
-    </div>
+    </FadeIn>
   );
 }
 
@@ -76,6 +94,7 @@ export default function Footer() {
   const credits = useCredits();
   const wrapperRef = useRef<HTMLElement>(null);
   const rollRef = useRef<HTMLDivElement>(null);
+  const screenRef = useRef<HTMLDivElement>(null);
   const [rollHeight, setRollHeight] = useState(0);
   const [vh, setVh] = useState(() => (typeof window === "undefined" ? 800 : window.innerHeight));
 
@@ -85,7 +104,9 @@ export default function Footer() {
     if (!roll) return;
     const measure = () => {
       setRollHeight(roll.offsetHeight);
-      setVh(window.innerHeight);
+      // the pinned screen's own height (svh), not innerHeight — that grows on phones as
+      // the address bar slides away, which would throw the roll's end off
+      setVh(screenRef.current?.offsetHeight ?? window.innerHeight);
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -131,7 +152,8 @@ export default function Footer() {
   return (
     <footer ref={wrapperRef} className="relative bg-(--color-bg) text-(--color-text)" style={{ height: travel + vh }}>
       <div
-        className="sticky top-0 h-screen overflow-hidden"
+        ref={screenRef}
+        className="sticky top-0 h-svh overflow-hidden"
         // credits fade in at the bottom and out at the top, like a real roll
         style={{
           maskImage: "linear-gradient(transparent 0%, #000 16%, #000 84%, transparent 100%)",
@@ -141,12 +163,12 @@ export default function Footer() {
         <motion.div ref={rollRef} style={{ y }} className="px-6">
           {/* the credits keep to a reading column; the final card below uses the full width */}
           <div className="mx-auto max-w-3xl">
-          <div className="mb-24 text-center">
+          <FadeIn className="mb-24 text-center">
             <p className="font-display text-[clamp(2.4rem,7vw,5rem)] leading-none font-semibold tracking-tight uppercase">
               The Archive
             </p>
             <p className="mt-4 text-[0.72rem] tracking-[0.28em] text-(--color-text-soft) uppercase">A travel archive</p>
-          </div>
+          </FadeIn>
 
           <Credit role="Photographed & filmed by">Luca Christl</Credit>
 
@@ -160,7 +182,7 @@ export default function Footer() {
           </Credit>
 
           {credits.trips.map(({ trip, when, places, count }) => (
-            <div key={trip.slug} className="mb-20 text-center sm:mb-24">
+            <FadeIn key={trip.slug} className="mb-20 text-center sm:mb-24">
               <p className="mb-2 text-[0.66rem] tracking-[0.28em] uppercase" style={{ color: trip.accent }}>
                 {when}
               </p>
@@ -183,7 +205,7 @@ export default function Footer() {
                 ))}
               </ul>
               <p className="mt-5 text-[0.66rem] tracking-[0.2em] text-(--color-text-soft) uppercase">{count} frames</p>
-            </div>
+            </FadeIn>
           ))}
 
           <Credit role="Cameras">
@@ -210,44 +232,55 @@ export default function Footer() {
           </div>
 
           {/* the final card — the roll's last screen, held in place at the end */}
-          <div className="flex h-screen flex-col items-center justify-center text-center">
-            <p className="mb-5 text-[0.66rem] tracking-[0.28em] text-(--color-text-soft) uppercase">Next destination</p>
-            <a
-              href={`mailto:${EMAIL}`}
-              className="group inline-flex items-center gap-3 font-display text-[clamp(2.6rem,10vw,7.5rem)] leading-[0.9] font-bold tracking-tight whitespace-nowrap uppercase"
-            >
-              Talk to me
-              <svg
-                width="0.55em"
-                height="0.55em"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                className="transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1"
-                aria-hidden="true"
+          <div className="flex h-svh flex-col items-center justify-center text-center">
+            {/* each line fades in a beat after the one above */}
+            <FadeIn>
+              <p className="mb-5 text-[0.66rem] tracking-[0.28em] text-(--color-text-soft) uppercase">Next destination</p>
+            </FadeIn>
+            <FadeIn delay={0.12}>
+              <a
+                href={`mailto:${EMAIL}`}
+                className="group inline-flex items-center gap-3 font-display text-[clamp(2.6rem,10vw,7.5rem)] leading-[0.9] font-bold tracking-tight whitespace-nowrap uppercase"
               >
-                <path d="M7 17 17 7M8 7h9v9" />
-              </svg>
-            </a>
-            <button
-              type="button"
-              onClick={copyEmail}
-              className="mt-6 cursor-pointer text-[0.95rem] text-(--color-text)/85 hover:text-(--color-text)"
-              aria-label={`Copy email address ${EMAIL}`}
-            >
-              {copied ? "Copied to clipboard ✓" : EMAIL}
-            </button>
-            <nav className="mt-8 flex gap-8 text-[0.72rem] tracking-[0.16em] text-(--color-text-soft) uppercase">
-              {SOCIALS.map((s) => (
-                <a key={s.label} href={s.href} target="_blank" rel="noreferrer" className="hover:text-(--color-text)">
-                  {s.label}
-                </a>
-              ))}
-            </nav>
-            <p className="mt-14 text-[0.68rem] tracking-[0.14em] text-(--color-text-soft)/80 uppercase [font-variant-numeric:tabular-nums]">
-              Aargau {localTime} · © {new Date().getFullYear()} Luca Christl
-            </p>
+                Talk to me
+                <svg
+                  width="0.55em"
+                  height="0.55em"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className="transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1"
+                  aria-hidden="true"
+                >
+                  <path d="M7 17 17 7M8 7h9v9" />
+                </svg>
+              </a>
+            </FadeIn>
+            <FadeIn delay={0.24}>
+              <button
+                type="button"
+                onClick={copyEmail}
+                className="mt-6 cursor-pointer text-[0.95rem] text-(--color-text)/85 hover:text-(--color-text)"
+                aria-label={`Copy email address ${EMAIL}`}
+              >
+                {copied ? "Copied to clipboard ✓" : EMAIL}
+              </button>
+            </FadeIn>
+            <FadeIn delay={0.36}>
+              <nav className="mt-8 flex gap-8 text-[0.72rem] tracking-[0.16em] text-(--color-text-soft) uppercase">
+                {SOCIALS.map((s) => (
+                  <a key={s.label} href={s.href} target="_blank" rel="noreferrer" className="hover:text-(--color-text)">
+                    {s.label}
+                  </a>
+                ))}
+              </nav>
+            </FadeIn>
+            <FadeIn delay={0.48}>
+              <p className="mt-14 text-[0.68rem] tracking-[0.14em] text-(--color-text-soft)/80 uppercase [font-variant-numeric:tabular-nums]">
+                Aargau {localTime} · © {new Date().getFullYear()} Luca Christl
+              </p>
+            </FadeIn>
           </div>
         </motion.div>
       </div>

@@ -25,7 +25,7 @@ export default function Manifesto() {
 
   return (
     <div ref={wrapperRef} className="relative h-[200vh] bg-(--color-bg)">
-      <div className="sticky top-0 flex h-screen items-center justify-center px-8 sm:px-16">
+      <div className="sticky top-0 flex h-svh items-center justify-center px-8 sm:px-16">
         <p className="max-w-4xl text-center font-display text-[clamp(1.9rem,4.4vw,3.6rem)] leading-[1.28] font-bold tracking-tight">
           {words.map((word, i) => (
             <Word key={i} word={word} progress={scrollYProgress} range={[i / words.length, (i + 1) / words.length]} />

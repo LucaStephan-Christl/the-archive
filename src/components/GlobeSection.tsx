@@ -170,7 +170,7 @@ export default function GlobeSection() {
 
       {/* scroll length per stop (vh), so each one gets the same time however many trips there are */}
       <div ref={wrapperRef} className="relative z-10" style={{ height: `${STOPS.length * VH_PER_STOP + 20}vh` }}>
-        <div className="sticky top-0 flex h-screen flex-col items-center justify-center gap-6 overflow-hidden px-6 md:flex-row md:gap-16 md:px-16">
+        <div className="sticky top-0 flex h-svh flex-col items-center justify-center gap-6 overflow-hidden px-6 md:flex-row md:gap-16 md:px-16">
           <div className="relative aspect-square w-[min(78vw,46vh)] shrink-0 md:w-[min(46vw,72vh)]">
             {/* oversized and centred on the box (see OVERSIZE) */}
             <canvas

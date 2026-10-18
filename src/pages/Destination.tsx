@@ -46,9 +46,9 @@ export default function Destination() {
     <div>
       <div
         ref={portalWrapperRef}
-        className={`relative w-full ${reduceMotion ? "h-screen" : "h-[300vh]"}`}
+        className={`relative w-full ${reduceMotion ? "h-svh" : "h-[300vh]"}`}
       >
-        <div className="sticky top-0 h-screen w-full overflow-hidden bg-(--color-bg)">
+        <div className="sticky top-0 h-svh w-full overflow-hidden bg-(--color-bg)">
           {destination.heroVideo ? (
             // Framed like the homepage hero (inset padding + rounded corners)
             // rather than full-bleed, so the portal's circular hole — always

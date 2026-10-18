@@ -468,7 +468,7 @@ export default function Hero() {
   const hole = Math.round(frameW * 0.045)
 
   return (
-    <section ref={sectionRef} className="relative h-screen min-h-[640px] w-full bg-(--color-bg) p-3 sm:p-6">
+    <section ref={sectionRef} className="relative h-svh min-h-[560px] w-full bg-(--color-bg) p-3 sm:p-6">
       <div
         ref={frameRef}
         onMouseMove={handleMouseMove}
