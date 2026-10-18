@@ -14,6 +14,8 @@ export interface MediaItem {
   poster?: string;
   /** camera model from EXIF / QuickTime metadata, e.g. "DC-S9" */
   camera?: string;
+  /** tiny silent 4s loop of a video (480px) — the intro tunnel's moving cards */
+  mini?: string;
   /** small cropped preview (map markers, place panels) */
   thumb?: string;
   width: number;

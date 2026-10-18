@@ -143,6 +143,17 @@ body {
 
 /* ---- bespoke visual effects (not expressible as clean Tailwind utilities) ---- */
 
+/* typewriter caret (Hero intro) */
+@keyframes caret {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
 .vlabel {
   writing-mode: vertical-rl;
   transform: rotate(180deg);

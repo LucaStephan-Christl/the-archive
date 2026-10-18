@@ -127,6 +127,7 @@ async function processTrip(trip) {
         console.log(`  ✓ ${label}`);
       }
       media.thumb = await ensureThumb(outDir, trip, media);
+      if (media.type === "video") media.mini = await ensureMini(outDir, trip, media);
       // camera: EXIF model for photos, Apple's model tag for iPhone videos —
       // Lumix videos carry none, so they borrow it from the file-name series
       const camera = date.camera ?? (isVideo && /^P1\d+/.test(file) ? "DC-S9" : undefined);
@@ -507,6 +508,29 @@ async function encodeVideo(srcPath, outDir, trip, id) {
 }
 
 /**
+ * A tiny silent loop of a video (480px long edge, 4s from a quarter in,
+ * 24fps) — light enough for a dozen to play at once as moving cards in the
+ * homepage intro's photo tunnel. Made from the encoded video already on disk.
+ */
+async function ensureMini(outDir, trip, media) {
+  const name = `${media.id}-mini.mp4`;
+  const file = path.join(outDir, name);
+  const exists = await fs.access(file).then(() => true, () => false);
+  if (!exists) {
+    const from = path.join(outDir, path.basename(media.src));
+    const start = Math.max(0, Math.min((media.duration ?? 0) * 0.25, (media.duration ?? 0) - 4));
+    await run(ffmpegPath, [
+      "-hide_banner", "-loglevel", "error", "-y",
+      "-ss", String(start), "-t", "4", "-i", from,
+      "-an", "-vf", "scale='if(gte(iw,ih),480,-2)':'if(gte(iw,ih),-2,480)':flags=lanczos,fps=24,format=yuv420p",
+      "-c:v", "libx264", "-preset", "slow", "-crf", "28", "-movflags", "+faststart",
+      file,
+    ]);
+  }
+  return `/media/${trip}/${name}`;
+}
+
+/**
  * Small square-ish preview (map markers, place panels) made from the grid
  * image / video poster already on disk, so adding it never re-encodes.
  */
@@ -579,7 +603,7 @@ async function outputsExist(outDir, item) {
 
 async function pruneOrphans(outDir, items, hero) {
   const keep = new Set(
-    [...items.flatMap((i) => [i.src, i.full, i.poster, i.thumb]), hero?.video, hero?.poster, hero?.preview, hero?.previewPoster]
+    [...items.flatMap((i) => [i.src, i.full, i.poster, i.thumb, i.mini]), hero?.video, hero?.poster, hero?.preview, hero?.previewPoster]
       .filter(Boolean)
       .map((p) => path.basename(p)),
   );
