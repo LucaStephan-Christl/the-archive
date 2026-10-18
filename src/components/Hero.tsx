@@ -37,6 +37,7 @@ const VIDEO_FRAMES = 11
 const PHOTO_FRAMES = 3
 const AFTER_TARGET = 3 // frames below the caught one, so the strip doesn't just end
 const START_PITCHES = 8 // how many frames the strip races through before catching
+const ANGLE = -7 // the strip runs across the screen at a slight tilt (deg)
 // share of the reel per trip (relative) — Japan and Iceland lead
 const TRIP_WEIGHT: Record<string, number> = { japan: 2.5, iceland: 2.5, budapest: 1, france: 1 }
 
@@ -185,23 +186,23 @@ export default function Hero() {
   const [flash, setFlash] = useState(false)
 
   // strip position (px; negative = up) and the projection's progress
-  const stripY = useMotionValue(0)
+  const stripX = useMotionValue(0)
   const project = useMotionValue(skipIntro ? 1 : 0)
-  const velocity = useVelocity(stripY)
+  const velocity = useVelocity(stripX)
   const blur = useTransform(velocity, (v) => `blur(${Math.min(5, Math.abs(v) / 900).toFixed(2)}px)`)
 
   // strip geometry follows the viewport
   const [frameW, setFrameW] = useState(560)
   const frameH = Math.round(frameW * 0.62)
   const gap = Math.round(frameW * 0.06)
-  const pitch = frameH + gap
+  const pitch = frameW + gap
   const pitchRef = useRef(pitch)
   pitchRef.current = pitch
   useLayoutEffect(() => {
     const measure = () => {
       const el = frameRef.current
       if (!el) return
-      setFrameW(Math.round(Math.min(620, el.clientWidth * 0.7, el.clientHeight * 0.95)))
+      setFrameW(Math.round(Math.min(640, el.clientWidth * 0.62, el.clientHeight * 0.85)))
     }
     measure()
     window.addEventListener('resize', measure)
@@ -228,20 +229,25 @@ export default function Hero() {
     at(T.flash + 0.1, () => setFlash(false))
     at(T.stripIn, () => {
       setPhase('strip')
-      // race up from far below; the slight overshoot in the curve is the jolt as it catches
+      // race in from the right; the slight overshoot in the curve is the jolt as it catches
       const target = -targetIndex * pitchRef.current
-      stripY.set(target + pitchRef.current * START_PITCHES)
-      anims.push(animate(stripY, target, { duration: T.roll, ease: [0.15, 0.7, 0.3, 1.04] }))
+      stripX.set(target + pitchRef.current * START_PITCHES)
+      anims.push(animate(stripX, target, { duration: T.roll, ease: [0.15, 0.7, 0.3, 1.04] }))
     })
     at(T.stripIn + T.roll + T.hold, () => {
-      const box = targetRef.current?.getBoundingClientRect()
+      const el = targetRef.current
       const screen = frameRef.current?.getBoundingClientRect()
-      if (box && screen) {
+      if (el && screen) {
+        // the frame is tilted, so take its centre from the bounding box and its size untransformed
+        const box = el.getBoundingClientRect()
+        const cx = box.left + box.width / 2 - screen.left
+        const cy = box.top + box.height / 2 - screen.top
         fromRect.current = {
-          x: ((box.left - screen.left) / screen.width) * 100,
-          y: ((box.top - screen.top) / screen.height) * 100,
-          w: (box.width / screen.width) * 100,
-          h: (box.height / screen.height) * 100,
+          x: ((cx - el.offsetWidth / 2) / screen.width) * 100,
+          y: ((cy - el.offsetHeight / 2) / screen.height) * 100,
+          w: (el.offsetWidth / screen.width) * 100,
+          h: (el.offsetHeight / screen.height) * 100,
+          r: ANGLE,
         }
       }
       // pick the supercut up exactly where the strip's copy of it is, so the cut is invisible
@@ -270,7 +276,7 @@ export default function Hero() {
       anims.forEach((a) => a.stop())
       stopListening()
     }
-  }, [skipIntro, targetIndex, stripY, project])
+  }, [skipIntro, targetIndex, stripX, project])
 
   const projStyle = useProjection(project, fromRect)
 
@@ -317,56 +323,55 @@ export default function Hero() {
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,236,200,0.1),transparent_65%)]" />
           )}
 
-          {/* the film strip — mounted from the start so the clips are loaded by the time it runs */}
+          {/* the film strip — mounted from the start so the clips are loaded by the time it runs.
+              A zero-size pivot at the centre tilts it; the strip slides along its own length. */}
           {phase !== 'done' && (
-            <motion.div
-              className="absolute top-1/2 left-1/2"
-              style={{
-                x: '-50%',
-                y: stripY,
-                marginTop: -(gap + frameH / 2),
-                filter: blur,
-                opacity: phase === 'strip' ? 1 : 0,
-                transition: 'opacity 0.6s',
-              }}
+            <div
+              className="absolute top-1/2 left-1/2 h-0 w-0"
+              style={{ rotate: `${ANGLE}deg`, opacity: phase === 'strip' ? 1 : 0, transition: 'opacity 0.6s' }}
             >
-              <div
-                className="film-strip flex flex-col items-center"
-                style={{ width: Math.round(frameW * 1.36), gap, paddingBlock: gap, '--hole': `${hole}px` } as CSSProperties}
+              <motion.div
+                className="absolute top-0 left-0 w-max"
+                style={{ x: stripX, y: '-50%', marginLeft: -(gap + frameW / 2), filter: blur }}
               >
-                {frames.map((f, i) => (
-                  <div
-                    key={i}
-                    ref={f.target ? targetRef : undefined}
-                    className="relative shrink-0 rounded-[3px] bg-black"
-                    style={{ width: frameW, height: frameH }}
-                  >
-                    <div className="h-full w-full overflow-hidden rounded-[3px]">
-                      {f.video ? (
-                        <ReelVideo src={f.src} />
-                      ) : (
-                        <img src={f.src} alt="" className="h-full w-full object-cover" draggable={false} />
+                <div
+                  className="film-strip film-strip--h flex items-center"
+                  style={{ height: frameH + hole * 8, gap, paddingInline: gap, '--hole': `${hole}px` } as CSSProperties}
+                >
+                  {frames.map((f, i) => (
+                    <div
+                      key={i}
+                      ref={f.target ? targetRef : undefined}
+                      className="relative shrink-0 rounded-[3px] bg-black"
+                      style={{ width: frameW, height: frameH }}
+                    >
+                      <div className="h-full w-full overflow-hidden rounded-[3px]">
+                        {f.video ? (
+                          <ReelVideo src={f.src} />
+                        ) : (
+                          <img src={f.src} alt="" className="h-full w-full object-cover" draggable={false} />
+                        )}
+                      </div>
+                      {/* edge codes printed in the margins, like real stock */}
+                      <span
+                        className="absolute left-[6%] text-[0.55rem] leading-none font-semibold tracking-[0.3em] whitespace-nowrap text-[#e7b34a]/75"
+                        style={{ bottom: `calc(100% + ${Math.round(hole * 0.45)}px)` }}
+                      >
+                        ▸ {String(i + 1).padStart(2, '0')}A
+                      </span>
+                      {i % 2 === 0 && (
+                        <span
+                          className="absolute right-[6%] text-[0.55rem] leading-none font-semibold tracking-[0.3em] whitespace-nowrap text-[#e7b34a]/55"
+                          style={{ top: `calc(100% + ${Math.round(hole * 0.45)}px)` }}
+                        >
+                          ARCHIVE 400
+                        </span>
                       )}
                     </div>
-                    {/* edge codes printed in the margins, like real stock */}
-                    <span
-                      className="absolute top-1/2 -translate-y-1/2 rotate-180 text-[0.55rem] font-semibold tracking-[0.3em] whitespace-nowrap text-[#e7b34a]/75 [writing-mode:vertical-rl]"
-                      style={{ right: `calc(100% + ${Math.round(hole * 0.35)}px)` }}
-                    >
-                      ▸ {String(i + 1).padStart(2, '0')}A
-                    </span>
-                    {i % 2 === 0 && (
-                      <span
-                        className="absolute top-1/2 -translate-y-1/2 text-[0.55rem] font-semibold tracking-[0.3em] whitespace-nowrap text-[#e7b34a]/55 [writing-mode:vertical-rl]"
-                        style={{ left: `calc(100% + ${Math.round(hole * 0.35)}px)` }}
-                      >
-                        ARCHIVE 400
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </motion.div>
+                  ))}
+                </div>
+              </motion.div>
+            </div>
           )}
 
           {/* the hero supercut — mounted (hidden) from the start so it's loaded, projected out
@@ -445,10 +450,12 @@ interface Rect {
   y: number
   w: number
   h: number
+  /** rotation (deg) */
+  r: number
 }
-const FULL: Rect = { x: 0, y: 0, w: 100, h: 100 }
+const FULL: Rect = { x: 0, y: 0, w: 100, h: 100, r: 0 }
 
-/** left/top/width/height (in % of the screen) tweening from the caught frame's box to full screen */
+/** left/top/width/height (in % of the screen) and tilt tweening from the caught frame's box to full screen */
 function useProjection(project: MotionValue<number>, from: React.RefObject<Rect | null>) {
   const lerp = (a: number, b: number, t: number) => a + (b - a) * t
   const f = () => from.current ?? FULL
@@ -457,5 +464,6 @@ function useProjection(project: MotionValue<number>, from: React.RefObject<Rect 
   const width = useTransform(project, (p) => `${lerp(f().w, 100, p)}%`)
   const height = useTransform(project, (p) => `${lerp(f().h, 100, p)}%`)
   const borderRadius = useTransform(project, (p) => `${lerp(3, 0, p)}px`)
-  return { left, top, width, height, borderRadius }
+  const rotate = useTransform(project, (p) => lerp(f().r, 0, p))
+  return { left, top, width, height, borderRadius, rotate }
 }

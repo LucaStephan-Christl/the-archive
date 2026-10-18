@@ -284,6 +284,30 @@ body {
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
 }
 
+/* …and running sideways: sprocket holes along the top and bottom */
+.film-strip--h {
+  background-image:
+    repeating-linear-gradient(
+      to right,
+      transparent 0 calc(var(--hole) * 0.55),
+      #e9e1cf calc(var(--hole) * 0.55) calc(var(--hole) * 1.45),
+      transparent calc(var(--hole) * 1.45) calc(var(--hole) * 2)
+    ),
+    repeating-linear-gradient(
+      to right,
+      transparent 0 calc(var(--hole) * 0.55),
+      #e9e1cf calc(var(--hole) * 0.55) calc(var(--hole) * 1.45),
+      transparent calc(var(--hole) * 1.45) calc(var(--hole) * 2)
+    );
+  background-size:
+    100% var(--hole),
+    100% var(--hole);
+  background-position:
+    0 calc(var(--hole) * 1.5),
+    0 calc(100% - var(--hole) * 1.5);
+  background-repeat: repeat-x;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .film-weave,
   .film-grain,

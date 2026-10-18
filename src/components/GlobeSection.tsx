@@ -54,10 +54,18 @@ function shortest(from: number, to: number) {
 const smoothstep = (x: number) => x * x * (3 - 2 * x);
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 
+// Zoom (× the resting size): pulled back mid-flight, leaning in on each destination.
+const ZOOM = { home: 1, flight: 0.78, stop: 1.38, stopMobile: 1.2 };
+// The canvas is this much bigger than the globe's box, so zooming in never clips the sphere or its glow.
+const OVERSIZE = 1.7;
+// Share of each leg's turn that's plain linear, so the globe never fully stops between scrolls.
+const DRIFT = 0.3;
+
 /**
- * A pinned section with a dotted 3D globe (cobe). Scrolling turns it from
- * home to each destination in turn — holding at each stop — while that
- * trip's card and preview video slide in beside it.
+ * A pinned section with a dotted 3D globe (cobe). Scrolling flies it from
+ * home to each destination in turn — pulling back for each leg and zooming
+ * in on arrival, never quite standing still — while that trip's card and
+ * preview video slide in beside it.
  */
 export default function GlobeSection() {
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -65,20 +73,29 @@ export default function GlobeSection() {
   const inView = useInView(wrapperRef, { margin: "200px 0px" });
   const { scrollYProgress } = useScroll({ target: wrapperRef, offset: ["start start", "end end"] });
 
-  // camera target (set from scroll) and current position (eased toward it each frame)
-  const target = useRef(anglesFor(HOME.lat, HOME.lon));
-  const current = useRef([...target.current] as [number, number]);
+  // camera target [phi, theta, zoom] (set from scroll) and current state (eased toward it each frame)
+  const target = useRef<[number, number, number]>([...anglesFor(HOME.lat, HOME.lon), ZOOM.home]);
+  const current = useRef([...target.current] as [number, number, number]);
   const [stop, setStop] = useState(0);
 
   useMotionValueEvent(scrollYProgress, "change", (p) => {
-    // x runs 0 → STOPS.length - 1; each segment holds at its ends and turns in the middle
+    // x runs 0 → STOPS.length - 1. Every bit of scroll moves the globe: the turn eases
+    // in and out of each stop without ever holding still, and the zoom pulls back for
+    // the flight and leans in on arrival.
     const x = clamp01(p) * (STOPS.length - 1);
     const i = Math.min(Math.floor(x), STOPS.length - 2);
-    const turn = smoothstep(clamp01((x - i - 0.3) / 0.4));
+    const t = x - i;
+    const turn = DRIFT * t + (1 - DRIFT) * smoothstep(t);
     const [phiA, thetaA] = anglesFor(STOPS[i].lat, STOPS[i].lon);
     const [phiB, thetaB] = anglesFor(STOPS[i + 1].lat, STOPS[i + 1].lon);
     const phiTo = shortest(phiA, phiB);
-    target.current = [phiA + (phiTo - phiA) * turn, thetaA + (thetaB - thetaA) * turn];
+    const stopZoom = window.matchMedia("(min-width: 768px)").matches ? ZOOM.stop : ZOOM.stopMobile;
+    const zoomA = i === 0 ? ZOOM.home : stopZoom;
+    const zoomB = stopZoom;
+    // a dip to flight zoom halfway through the leg
+    const settle = zoomA + (zoomB - zoomA) * turn;
+    const zoom = settle + (ZOOM.flight - settle) * Math.sin(Math.PI * t);
+    target.current = [phiA + (phiTo - phiA) * turn, thetaA + (thetaB - thetaA) * turn, zoom];
     setStop(Math.round(x));
   });
 
@@ -88,13 +105,16 @@ export default function GlobeSection() {
     if (!canvas || !inView) return;
 
     const size = canvas.offsetWidth;
+    const [phi0, theta0, zoom0] = current.current;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const globe = createGlobe(canvas, {
       devicePixelRatio: dpr,
-      width: size * dpr,
-      height: size * dpr,
-      phi: current.current[0],
-      theta: current.current[1],
+      // CSS pixels — cobe multiplies by devicePixelRatio itself
+      width: size,
+      height: size,
+      phi: phi0,
+      theta: theta0,
+      scale: zoom0 / OVERSIZE,
       dark: 1,
       diffuse: 1.4,
       mapSamples: 16000,
@@ -124,11 +144,11 @@ export default function GlobeSection() {
     let raf = 0;
     const tick = () => {
       raf = requestAnimationFrame(tick);
-      const [phi, theta] = current.current;
-      const [phiT, thetaT] = target.current;
+      const [phi, theta, zoom] = current.current;
+      const [phiT, thetaT, zoomT] = target.current;
       // ease toward the scroll target — keeps it smooth even with jumpy wheel input
-      current.current = [phi + (phiT - phi) * 0.08, theta + (thetaT - theta) * 0.08];
-      globe.update({ phi: current.current[0], theta: current.current[1] });
+      current.current = [phi + (phiT - phi) * 0.07, theta + (thetaT - theta) * 0.07, zoom + (zoomT - zoom) * 0.06];
+      globe.update({ phi: current.current[0], theta: current.current[1], scale: current.current[2] / OVERSIZE });
     };
     raf = requestAnimationFrame(tick);
     canvas.style.opacity = "1";
@@ -152,14 +172,17 @@ export default function GlobeSection() {
       <div ref={wrapperRef} className="relative z-10" style={{ height: `${STOPS.length * VH_PER_STOP + 20}vh` }}>
         <div className="sticky top-0 flex h-screen flex-col items-center justify-center gap-6 overflow-hidden px-6 md:flex-row md:gap-16 md:px-16">
           <div className="relative aspect-square w-[min(78vw,46vh)] shrink-0 md:w-[min(46vw,72vh)]">
+            {/* oversized and centred on the box (see OVERSIZE) */}
             <canvas
               ref={canvasRef}
-              className="h-full w-full opacity-0 transition-opacity duration-1000"
+              className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 transition-opacity duration-1000"
+              style={{ width: `${OVERSIZE * 100}%`, height: `${OVERSIZE * 100}%` }}
               aria-label="Globe turning to each destination"
             />
           </div>
 
-          <div className="relative flex min-h-[9.5rem] w-full max-w-sm items-center md:min-h-[30rem]">
+          {/* above the globe, which can grow into this column when it zooms in */}
+          <div className="relative z-10 flex min-h-[9.5rem] w-full max-w-sm items-center md:min-h-[30rem]">
             <AnimatePresence mode="wait">
               {active ? (
                 <motion.div
