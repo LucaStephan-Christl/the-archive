@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "media": "node scripts/media.mjs",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "supercut": "node scripts/supercut.mjs"
   },
   "dependencies": {
     "@fontsource/noto-serif-jp": "^5.3.0",
