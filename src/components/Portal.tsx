@@ -4,6 +4,8 @@ import type { DestinationKind } from "../data/trips";
 const ICELAND_BLUE = "#00308f";
 const HUNGARY_RED = "#cd2a3e";
 const HUNGARY_GREEN = "#436f4d";
+const FRANCE_BLUE = "#1f4fa8";
+const FRANCE_RED = "#e5413a";
 
 // The sticky pin (see Destination.tsx) only lasts the first 2/3 of scroll
 // progress — past that the wrapper starts sliding away regardless of what
@@ -25,7 +27,7 @@ interface PortalProps {
 /**
  * The flag-homage portal: Japan gets the hinomaru circle, Iceland the
  * Nordic cross (offset toward the hoist, official 18:25 proportions),
- * Hungary the tricolour (its white middle stripe is the window).
+ * Hungary and France their tricolours (the white middle stripe is the window).
  * Both render as a full-viewport field of flag colour with a shape-shaped
  * hole in it — a window onto the real page underneath. Scrolling grows that
  * hole (the mask radius for Japan, shrinking corner tiles for Iceland)
@@ -65,10 +67,17 @@ export default function Portal({
   // Hungary: the red and green thirds shrink toward the top and bottom edges,
   // widening the white middle stripe — the window — until it's the whole screen
   const bandHeight = useTransform(cornerScale, (s) => `${(100 / 3) * s}%`);
+  // France: the same, sideways — blue and red thirds shrink toward the left and right edges
+  const bandWidth = useTransform(cornerScale, (s) => `${(100 / 3) * s}%`);
 
   return (
     <div className="iceland-cross absolute inset-0" aria-hidden="true">
-      {kind === "stripes" ? (
+      {kind === "tricolour" ? (
+        <>
+          <motion.div className="absolute inset-y-0 left-0" style={{ width: bandWidth, background: FRANCE_BLUE }} />
+          <motion.div className="absolute inset-y-0 right-0" style={{ width: bandWidth, background: FRANCE_RED }} />
+        </>
+      ) : kind === "stripes" ? (
         <>
           <motion.div className="absolute inset-x-0 top-0" style={{ height: bandHeight, background: HUNGARY_RED }} />
           <motion.div className="absolute inset-x-0 bottom-0" style={{ height: bandHeight, background: HUNGARY_GREEN }} />

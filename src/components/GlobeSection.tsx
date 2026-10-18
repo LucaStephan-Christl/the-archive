@@ -20,6 +20,7 @@ const FOCUS: Record<Destination["slug"], [number, number]> = {
   japan: [35.4, 137.0],
   iceland: [64.9, -19.0],
   budapest: [47.4979, 19.0402],
+  france: [49.4, 1.9], // between Paris and Criel-sur-Mer
 };
 
 const DESTINATION_LIST = tripsOldestFirst;

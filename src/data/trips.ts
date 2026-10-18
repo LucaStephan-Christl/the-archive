@@ -6,8 +6,9 @@ import { getTripHero, getTripMedia } from "./media";
 const japanHero = getTripHero("japan");
 const icelandHero = getTripHero("iceland");
 const budapestHero = getTripHero("budapest");
-/** Flag-portal shape: Japan's hinomaru, Iceland's Nordic cross, Hungary's tricolour. */
-export type DestinationKind = "circle" | "cross" | "stripes";
+const franceHero = getTripHero("france");
+/** Flag-portal shape: Japan's hinomaru, Iceland's Nordic cross, Hungary's horizontal tricolour, France's vertical one. */
+export type DestinationKind = "circle" | "cross" | "stripes" | "tricolour";
 
 export interface Tile {
   wide?: boolean;
@@ -21,7 +22,7 @@ export interface DaySection {
 }
 
 export interface Destination {
-  slug: "japan" | "iceland" | "budapest";
+  slug: "japan" | "iceland" | "budapest" | "france";
   kind: DestinationKind;
   vTop: string;
   vBottom: string;
@@ -41,11 +42,13 @@ export interface Destination {
   local?: {
     /** BCP-47 language tag, e.g. "ja" */
     lang: string;
-    /** 日本 */
-    name: string;
+    /** 日本 — left out when it's the same as the English (France) */
+    name?: string;
     /** headline translation, under the English one */
     headline?: string;
   };
+  /** "2025-08-01" — when the trip was, for sorting until it has photos (after that, the first photo decides). */
+  startDate?: string;
   /** Optional place name per capture date, shown next to it in the timeline
    * ("Jan 16 — Kyoto"). Days come from the photos themselves (`yarn media`). */
   dayLabels?: Record<string, string>;
@@ -192,11 +195,58 @@ export const destinations: Record<Destination["slug"], Destination> = {
       },
     ],
   },
+  france: {
+    slug: "france",
+    kind: "tricolour",
+    vTop: "FRANCE 2025",
+    vBottom: "PARIS / CRIEL-SUR-MER",
+    portalBg:
+      "radial-gradient(circle at 32% 30%, #a9b8ee 0%, #4f63a8 40%, #0c0d14 78%)",
+    // placeholder until media/france/hero/ has a clip
+    heroBg: franceHero
+      ? `url(${franceHero.poster})`
+      : "radial-gradient(120% 90% at 30% 20%, #dfe5fb 0%, #8fa2e6 30%, #3d4f8f 62%, #0c0d14 100%)",
+    heroVideo: franceHero?.video,
+    preview: franceHero?.preview && franceHero.previewPoster ? { video: franceHero.preview, poster: franceHero.previewPoster } : undefined,
+    heroFit: franceHero && franceHero.height > franceHero.width ? "contain" : "cover",
+    accent: "#7d93d8",
+    eyebrow: "France, Aug 2025",
+    startDate: "2025-08-01",
+    headline: "Paris and the sea.",
+    local: {
+      lang: "fr",
+      name: "La France",
+      headline: "Paris et la mer.",
+    },
+    dayLabels: {
+      // "2025-08-10": "Paris",
+    },
+    days: [
+      {
+        n: "01",
+        label: "Paris",
+        tiles: [
+          { wide: true, bg: "linear-gradient(160deg,#2a3048,#0d0f18)" },
+          { bg: "linear-gradient(160deg,#252b40,#0c0e16)" },
+          { bg: "linear-gradient(160deg,#2e344c,#0e1019)" },
+        ],
+      },
+      {
+        n: "02",
+        label: "Criel-sur-Mer",
+        tiles: [
+          { bg: "linear-gradient(160deg,#283247,#0c1017)" },
+          { wide: true, bg: "linear-gradient(160deg,#2d3850,#0e111a)" },
+          { bg: "linear-gradient(160deg,#27304a,#0c0f18)" },
+        ],
+      },
+    ],
+  },
 };
 
 /** When a trip started — its earliest photo ("" for a trip with no media yet, which sorts as newest). */
 function tripStart(d: Destination) {
-  return getTripMedia(d.slug)[0]?.takenAt ?? "";
+  return getTripMedia(d.slug)[0]?.takenAt ?? d.startDate ?? "";
 }
 
 const byStart = (a: Destination, b: Destination) => {
@@ -236,4 +286,8 @@ export const homeGrid: HomeTile[] = [
   { trip: "budapest", id: "img-6065-afe3c5", caption: "St. Stephen's — Apr 2025" },
   { trip: "budapest", id: "img-6109-46ed54", caption: "Danube — Apr 2025" },
   { trip: "budapest", id: "img-6175-430a89", caption: "Ruin bars — Apr 2025" },
+  { trip: "france", id: "img-6710-0428f4", caption: "Paris — Aug 2025" }, // Eiffel Tower at night
+  { trip: "france", id: "img-8016-cf6da0", caption: "Notre-Dame — Aug 2025" },
+  { trip: "france", id: "img-8249-5b4c02", caption: "Mers-les-Bains — Aug 2025" }, // Belle Époque villas
+  { trip: "france", id: "img-8447-b79f0c", caption: "Criel-sur-Mer — Aug 2025" }, // sunset from the cliffs
 ];

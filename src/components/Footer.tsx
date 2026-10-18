@@ -119,7 +119,8 @@ export default function Footer() {
     setTimeout(() => setCopied(false), 1600);
   }
 
-  const zurichTime = new Intl.DateTimeFormat("en-GB", {
+  // "Europe/Zurich" is the time zone for all of Switzerland, Aargau included
+  const localTime = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Europe/Zurich",
     hour: "2-digit",
     minute: "2-digit",
@@ -245,7 +246,7 @@ export default function Footer() {
               ))}
             </nav>
             <p className="mt-14 text-[0.68rem] tracking-[0.14em] text-(--color-text-soft)/80 uppercase [font-variant-numeric:tabular-nums]">
-              Zurich {zurichTime} · © {new Date().getFullYear()} Luca Christl
+              Aargau {localTime} · © {new Date().getFullYear()} Luca Christl
             </p>
           </div>
         </motion.div>

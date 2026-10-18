@@ -92,7 +92,7 @@ export default function Nav() {
               {...{ [CURSOR_ZONE_ATTR]: '' }}
             >
               <div className="flex flex-col px-6 py-4 sm:px-10">
-                {DESTINATION_LIST.map((destination, i) => (
+                {DESTINATION_LIST.map((destination) => (
                   <Link
                     key={destination.slug}
                     to={`/${destination.slug}`}
@@ -108,9 +108,6 @@ export default function Nav() {
                     className="group flex items-baseline justify-between gap-6 border-b border-(--color-line) py-5 transition-opacity duration-300 last:border-b-0"
                   >
                     <div className="flex items-baseline gap-5">
-                      <span className="text-[0.72rem] text-(--color-text-soft)">
-                        {String(i + 1).padStart(2, '0')}
-                      </span>
                       {/* local name sits under the title on a phone (a long one like
                           Magyarország overflows beside it), beside it from sm up */}
                       <div className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:items-baseline sm:gap-5">

@@ -45,7 +45,7 @@ const PLACES_DIR = path.join(ROOT, "src", "data", "places");
  *   { "timezone": "Asia/Tokyo", "clockShiftHours": { "DC-S9": 8 } }
  * where clockShiftHours is keyed by the EXIF camera Model.
  */
-const TIMEZONES = { japan: "Asia/Tokyo", iceland: "Atlantic/Reykjavik", budapest: "Europe/Budapest" };
+const TIMEZONES = { japan: "Asia/Tokyo", iceland: "Atlantic/Reykjavik", budapest: "Europe/Budapest", france: "Europe/Paris" };
 
 const IMAGE_EXT = new Set([".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff", ".heic", ".heif"]);
 const VIDEO_EXT = new Set([".mov", ".mp4", ".m4v"]);

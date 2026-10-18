@@ -105,9 +105,6 @@ export default function ArchiveHome() {
                 style={{ opacity: isDimmed ? 0.35 : 1 }}
               >
                 <div className="flex items-baseline gap-5">
-                  <span className="text-[0.72rem] text-(--color-text-soft)">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
                   {/* local name under the title on a phone, beside it from sm up */}
                   <div className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:items-baseline sm:gap-5">
                     <span

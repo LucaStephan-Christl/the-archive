@@ -78,6 +78,16 @@
   --color-flag-accent: #d72828;
 }
 
+/* labels sit on the blue (left) and red (right) bands of the tricolour */
+[data-dest="france"] {
+  --color-bg: #0c0d12;
+  --color-accent: #7d93d8;
+  --color-landing-bg: #1f4fa8;
+  --color-landing-ink: #ffffff;
+  --color-landing-soft: #dfe4f6;
+  --color-flag-accent: #e5413a;
+}
+
 /* labels sit on the red top band / green bottom band of the tricolour */
 [data-dest="budapest"] {
   --color-bg: #110f0b;
