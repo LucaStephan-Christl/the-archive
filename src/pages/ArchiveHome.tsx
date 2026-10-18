@@ -10,10 +10,17 @@ import { getTripMedia, type MediaItem } from "../data/media";
 import Nav from "../components/Nav";
 import Reveal from "../components/Reveal";
 import { tripsNewestFirst, homeGrid, type Destination } from "../data/trips";
-import { CURSOR_ZONE_ATTR, setCursorState, useCursorState } from "../lib/cursorStore";
+import {
+  CURSOR_ZONE_ATTR,
+  setCursorState,
+  useCursorState,
+} from "../lib/cursorStore";
 
 const DESTINATION_LIST = tripsNewestFirst;
-const TOTAL_FRAMES = DESTINATION_LIST.reduce((n, d) => n + getTripMedia(d.slug).length, 0);
+const TOTAL_FRAMES = DESTINATION_LIST.reduce(
+  (n, d) => n + getTripMedia(d.slug).length,
+  0,
+);
 
 // Resolve each pick to its media item; ids that no longer exist (file
 // removed from media/) are just skipped rather than breaking the page.
@@ -33,15 +40,24 @@ const shuffle = <T,>(list: T[]) => {
  * by side. Picks whose media no longer exists are skipped.
  */
 function shuffledFrames() {
-  const byTrip = new Map<string, { tile: (typeof homeGrid)[number]; item: MediaItem }[]>();
+  const byTrip = new Map<
+    string,
+    { tile: (typeof homeGrid)[number]; item: MediaItem }[]
+  >();
   for (const tile of homeGrid) {
     const item = getTripMedia(tile.trip).find((m) => m.id === tile.id);
     if (!item) continue;
     byTrip.set(tile.trip, [...(byTrip.get(tile.trip) ?? []), { tile, item }]);
   }
-  const perTrip = Math.min(...[...byTrip.values()].map((frames) => frames.length));
-  const decks = shuffle([...byTrip.values()]).map((frames) => shuffle(frames).slice(0, perTrip));
-  return Array.from({ length: perTrip }, (_, round) => decks.map((deck) => deck[round])).flat();
+  const perTrip = Math.min(
+    ...[...byTrip.values()].map((frames) => frames.length),
+  );
+  const decks = shuffle([...byTrip.values()]).map((frames) =>
+    shuffle(frames).slice(0, perTrip),
+  );
+  return Array.from({ length: perTrip }, (_, round) =>
+    decks.map((deck) => deck[round]),
+  ).flat();
 }
 
 const FRAMES = shuffledFrames();
@@ -66,7 +82,9 @@ export default function ArchiveHome() {
     setCursorState({
       label: "Enter",
       color: destination.accent,
-      image: destination.preview ? `url(${destination.preview.poster})` : destination.heroBg,
+      image: destination.preview
+        ? `url(${destination.preview.poster})`
+        : destination.heroBg,
       video: destination.preview?.video ?? destination.heroVideo,
     });
   }
@@ -109,7 +127,9 @@ export default function ArchiveHome() {
                   <div className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:items-baseline sm:gap-5">
                     <span
                       className="font-display text-[clamp(2.4rem,7vw,5.5rem)] leading-none font-semibold tracking-tight uppercase transition-colors duration-300"
-                      style={{ color: isHovered ? destination.accent : undefined }}
+                      style={{
+                        color: isHovered ? destination.accent : undefined,
+                      }}
                     >
                       {destination.slug}
                     </span>
@@ -145,15 +165,26 @@ export default function ArchiveHome() {
       </Reveal>
       <div className="relative z-10 grid grid-cols-4 gap-3.5 px-8 pb-16 max-[760px]:grid-cols-2">
         {FRAMES.map(({ tile, item }, i) => (
-          <Reveal key={item.id} delay={(i % 4) * 70} className="relative aspect-[2/3]">
-            <MediaTile item={item} layout="fill" onOpen={() => openFrame(item.id)} />
+          <Reveal
+            key={item.id}
+            delay={(i % 4) * 70}
+            className="relative aspect-2/3"
+          >
+            <MediaTile
+              item={item}
+              layout="fill"
+              onOpen={() => openFrame(item.id)}
+            />
             {/* place (+ local name) on one line, the date small beneath — "Kamakura — Jan 2026"
                 used to break mid-phrase on a phone */}
             {/* centred: right-aligned pills looked off whenever their text wrapped */}
             <span className="pointer-events-none absolute bottom-2 left-1/2 z-10 w-max max-w-[calc(100%-1rem)] -translate-x-1/2 rounded-[10px] bg-black/35 px-2.5 py-1.5 text-center text-white backdrop-blur-md backdrop-saturate-150 sm:bottom-2.5 sm:rounded-(--radius)">
               <span className="block truncate text-[0.68rem] leading-tight font-medium sm:text-[0.72rem]">
                 {tile.caption.split(" — ")[0]}
-                <Local lang={item.lang} className="ml-1.5 font-normal text-white/70">
+                <Local
+                  lang={item.lang}
+                  className="ml-1.5 font-normal text-white/70"
+                >
                   {item.cityJa}
                 </Local>
               </span>

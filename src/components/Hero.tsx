@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import {
   animate,
   motion,
@@ -17,14 +17,96 @@ import { useAutoplay } from '../lib/useAutoplay'
 const EASE = [0.16, 1, 0.3, 1] as const
 const SEEN_KEY = 'archive-intro-seen'
 // built by `yarn supercut` from src/data/supercut.json
-const SUPERCUT = '/media/home/supercut.mp4'
-const SUPERCUT_POSTER = '/media/home/supercut-poster.webp'
+// — a 16:9 cut, and a 9:16 one for portrait screens (a phone would otherwise see a quarter of the wide one)
+interface Supercut {
+  video: string
+  poster: string
+}
+const SUPERCUT: Supercut = { video: '/media/home/supercut.mp4', poster: '/media/home/supercut-poster.webp' }
+const SUPERCUT_PORTRAIT: Supercut = {
+  video: '/media/home/supercut-portrait.mp4',
+  poster: '/media/home/supercut-portrait-poster.webp',
+}
+/** picked once on load — a rotated phone keeps it, object-cover still fills */
+function pickSupercut(): Supercut {
+  return typeof window !== 'undefined' && window.matchMedia('(max-aspect-ratio: 1/1)').matches ? SUPERCUT_PORTRAIT : SUPERCUT
+}
 
-// intro timeline (seconds)
+const NUMBER_WORDS = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten']
+
+// ---- the opening title cards (typed, held, faded) --------------------------------
+
+interface Line {
+  text: string
+  /** ms per character */
+  typeMs: number
+  /** ms the finished line stays up */
+  hold: number
+}
+const FADE_MS = 500
+const GAP_MS = 250
+
+function useLines(): Line[] {
+  return useMemo(() => {
+    const frames = tripsOldestFirst.reduce((n, t) => n + getTripMedia(t.slug).length, 0)
+    const countries = tripsOldestFirst.length
+    return [
+      { text: '...', typeMs: 380, hold: 450 },
+      { text: 'Hi — these are some of my best memories.', typeMs: 46, hold: 1300 },
+      { text: `${NUMBER_WORDS[countries] ?? countries} countries, ${frames} frames.`, typeMs: 55, hold: 1300 },
+      { text: 'With the best companions.', typeMs: 52, hold: 1400 },
+    ]
+  }, [])
+}
+
+/** Types each line, holds it, fades it — then calls onDone. A blinking caret follows the text. */
+function Typewriter({ lines, onDone }: { lines: Line[]; onDone: () => void }) {
+  const [index, setIndex] = useState(0)
+  const [chars, setChars] = useState(0)
+  const [fading, setFading] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    const timers: ReturnType<typeof setTimeout>[] = []
+    const at = (ms: number, fn: () => void) => timers.push(setTimeout(() => !cancelled && fn(), ms))
+    let t = 350
+    lines.forEach((line, i) => {
+      at(t, () => {
+        setIndex(i)
+        setChars(0)
+        setFading(false)
+      })
+      for (let c = 1; c <= line.text.length; c++) at(t + c * line.typeMs, () => setChars(c))
+      t += line.text.length * line.typeMs + line.hold
+      at(t, () => setFading(true))
+      t += FADE_MS + GAP_MS
+    })
+    at(t - GAP_MS, onDone)
+    return () => {
+      cancelled = true
+      timers.forEach(clearTimeout)
+    }
+  }, [lines, onDone])
+
+  const line = lines[index]
+  return (
+    <motion.p
+      className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-8 text-center font-display text-[clamp(1.25rem,3vw,2.3rem)] leading-snug font-medium tracking-tight text-(--color-text)"
+      animate={{ opacity: fading ? 0 : 1, filter: fading ? 'blur(6px)' : 'blur(0px)' }}
+      transition={{ duration: FADE_MS / 1000, ease: 'easeOut' }}
+      aria-live="polite"
+    >
+      <span>
+        {line.text.slice(0, chars)}
+        <span className="ml-1 inline-block h-[1.05em] w-[0.08em] translate-y-[0.15em] animate-[caret_1s_steps(2)_infinite] bg-(--color-text)" />
+      </span>
+    </motion.p>
+  )
+}
+
+// intro timeline after the title cards (seconds)
 const T = {
-  count: 1.1, // per number: 3 · 2 · 1
-  flash: 3.3, // the projector fires
-  stripIn: 3.42,
+  stripIn: 0.1,
   roll: 3.6, // the camera racing along the strip, slowing, catching
   faceAt: 0.68, // share of the roll after which the camera swings round to face the caught frame…
   face: 1.25, // …taking this long
@@ -44,7 +126,7 @@ const START_PITCHES = 9 // how many frames the camera races past before catching
 // panning along it. [start of the roll, end of the roll]; facing the caught
 // frame brings everything to 0. Flip the sign of rotateY to swap which end recedes.
 const CAMERA = {
-  perspective: 1200,
+  perspective: 2, // × the frame width, so the depth reads the same on a phone as on a desktop
   rotateY: [54, 34], // deg
   rotateX: [10, 5],
   rotateZ: [-6, -3],
@@ -69,7 +151,7 @@ function rng(seed: number) {
 }
 
 /** mostly video loops (weighted to Japan & Iceland), a few stills, then the hero supercut and a short tail */
-function useReel(): { frames: Frame[]; targetIndex: number } {
+function useReel(supercut: Supercut): { frames: Frame[]; targetIndex: number } {
   return useMemo(() => {
     const random = rng(23)
     const totalWeight = tripsOldestFirst.reduce((n, t) => n + (TRIP_WEIGHT[t.slug] ?? 1), 0)
@@ -99,8 +181,9 @@ function useReel(): { frames: Frame[]; targetIndex: number } {
     )
     const reel = shuffle([...shuffle(videos).slice(0, VIDEO_FRAMES), ...shuffle(photos).slice(0, PHOTO_FRAMES)])
     const tail = reel.splice(reel.length - AFTER_TARGET, AFTER_TARGET)
-    return { frames: [...reel, { src: SUPERCUT, video: true, target: true }, ...tail], targetIndex: reel.length }
-  }, [])
+    // the caught frame plays the same file as the hero, so the handoff between them is seamless
+    return { frames: [...reel, { src: supercut.video, video: true, target: true }, ...tail], targetIndex: reel.length }
+  }, [supercut])
 }
 
 function ReelVideo({ src }: { src: string }) {
@@ -142,13 +225,21 @@ function StripFrame({
 }
 
 /** the hero at rest; left on its poster for reduced motion */
-function SupercutVideo({ videoRef, play }: { videoRef: React.RefObject<HTMLVideoElement | null>; play: boolean }) {
+function SupercutVideo({
+  supercut,
+  videoRef,
+  play,
+}: {
+  supercut: Supercut
+  videoRef: React.RefObject<HTMLVideoElement | null>
+  play: boolean
+}) {
   useAutoplay(play ? videoRef : { current: null }, [play])
   return (
     <video
       ref={videoRef}
-      src={SUPERCUT}
-      poster={SUPERCUT_POSTER}
+      src={supercut.video}
+      poster={supercut.poster}
       autoPlay={play}
       muted
       loop
@@ -159,53 +250,56 @@ function SupercutVideo({ videoRef, play }: { videoRef: React.RefObject<HTMLVideo
   )
 }
 
-// ---- the leader countdown ----------------------------------------------------------
+// where each trip's glow starts, and how long its slow drift takes (s)
+const GLOWS = [
+  { x: 18, y: 28, duration: 23 },
+  { x: 78, y: 22, duration: 29 },
+  { x: 70, y: 78, duration: 26 },
+  { x: 24, y: 74, duration: 31 },
+]
 
-/** Academy-leader style countdown: a sweeping wedge over crosshairs and rings, 3 · 2 · 1. */
-function Leader({ number }: { number: number }) {
+/**
+ * Ambience behind the intro: each trip's accent colour as a large, soft glow
+ * drifting slowly about the dark, and a warm light in the middle that
+ * breathes — brighter once the reel is running, like a lamp behind it.
+ */
+function AmbientLight({ bright }: { bright: boolean }) {
   return (
-    <div className="absolute inset-0 flex items-center justify-center overflow-hidden bg-[#1b1a18]">
+    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+      {tripsOldestFirst.map((trip, i) => {
+        const glow = GLOWS[i % GLOWS.length]
+        return (
+          <div
+            key={trip.slug}
+            className="ambient-glow absolute aspect-square w-[70vmax] rounded-full"
+            style={{
+              left: `${glow.x}%`,
+              top: `${glow.y}%`,
+              background: `radial-gradient(circle, ${trip.accent} 0%, transparent 62%)`,
+              animationDuration: `${glow.duration}s`,
+              animationDelay: `${-i * 4}s`,
+            }}
+          />
+        )
+      })}
       <div
-        key={number}
-        className="absolute aspect-square w-[max(150vw,150vh)] rounded-full"
+        className="ambient-core absolute top-1/2 left-1/2 aspect-[16/10] w-[85vmax] -translate-x-1/2 -translate-y-1/2 rounded-full transition-opacity duration-[1500ms]"
         style={{
-          background:
-            'conic-gradient(from 0deg, rgba(255,250,235,0.13) 0deg, rgba(255,250,235,0.13) var(--sweep), transparent var(--sweep))',
-          animation: `leader-sweep ${T.count}s linear forwards`,
+          background: 'radial-gradient(ellipse, rgba(255, 226, 180, 0.22) 0%, transparent 60%)',
+          opacity: bright ? 1 : 0.55,
         }}
       />
-      <div className="absolute inset-x-0 top-1/2 h-px bg-[#d9d2c3]/45" />
-      <div className="absolute inset-y-0 left-1/2 w-px bg-[#d9d2c3]/45" />
-      <div className="absolute aspect-square w-[min(64vw,64vh)] rounded-full border-2 border-[#d9d2c3]/60" />
-      <div className="absolute aspect-square w-[min(54vw,54vh)] rounded-full border border-[#d9d2c3]/40" />
-      <span className="relative font-display text-[min(34vw,34vh)] leading-none font-bold text-[#ebe4d4]">{number}</span>
-    </div>
-  )
-}
-
-// ---- film look: grain, flicker, scratches, vignette ---------------------------------
-
-function FilmTexture({ strong }: { strong: boolean }) {
-  return (
-    <div className={`pointer-events-none absolute inset-0 z-40 overflow-hidden ${strong ? '' : 'film-calm'}`} aria-hidden="true">
-      <div className="film-grain" />
-      <div className="film-flicker" />
-      <div className="film-scratch" style={{ left: '23%', animationDuration: '1.7s' }} />
-      <div className="film-scratch" style={{ left: '71%', animationDuration: '2.3s', animationDelay: '-0.8s' }} />
-      <div className="film-scratch film-scratch--dark" style={{ left: '48%', animationDuration: '3.1s', animationDelay: '-1.4s' }} />
-      <div className="film-vignette" />
     </div>
   )
 }
 
 /**
- * The opening sequence as a projected film: an academy-leader countdown
- * (3 · 2 · 1), the projector firing, then a 35mm strip of the archive —
- * mostly moving clips — rattling through the gate, slowing and catching on
- * the hero photo, which is then projected up to fill the screen as the title
- * settles. Grain, flicker, scratches and gate weave throughout; after the
- * landing they calm to a texture. Plays once per session; any click, key,
- * scroll or tap skips it.
+ * The opening sequence: typed title cards on the dark ("Hi — these are
+ * some of my best memories…"), then a 35mm strip of the archive — mostly
+ * moving clips — receding into the screen as the camera pans along it,
+ * slowing and catching on the hero supercut, which is then projected up to
+ * fill the screen as the title settles. Plays once per session; any click,
+ * key, scroll or tap skips it.
  */
 export default function Hero() {
   const reduceMotion = useReducedMotion()
@@ -213,7 +307,8 @@ export default function Hero() {
   const frameRef = useRef<HTMLDivElement>(null)
   const targetRef = useRef<HTMLDivElement>(null)
   const heroVideoRef = useRef<HTMLVideoElement>(null)
-  const { frames, targetIndex } = useReel()
+  const [supercut] = useState(pickSupercut)
+  const { frames, targetIndex } = useReel(supercut)
 
   const [skipIntro] = useState(() => {
     if (reduceMotion) return true
@@ -224,10 +319,16 @@ export default function Hero() {
     }
   })
 
-  type Phase = 'leader' | 'strip' | 'project' | 'done'
-  const [phase, setPhase] = useState<Phase>(skipIntro ? 'done' : 'leader')
-  const [count, setCount] = useState(3)
-  const [flash, setFlash] = useState(false)
+  type Phase = 'typing' | 'strip' | 'project' | 'done'
+  const [phase, setPhase] = useState<Phase>(skipIntro ? 'done' : 'typing')
+  const lines = useLines()
+  // the reel's timeline starts once the last title card has faded
+  const [rolling, setRolling] = useState(false)
+  const skippedRef = useRef(false)
+  const startReel = useCallback(() => {
+    if (skippedRef.current) return
+    setRolling(true)
+  }, [])
 
   // strip position along its length (px), the camera's pan through the roll (0–1),
   // it swinging round to face the caught frame (0–1), and the projection's progress
@@ -253,7 +354,9 @@ export default function Hero() {
     const measure = () => {
       const el = frameRef.current
       if (!el) return
-      setFrameW(Math.round(Math.min(680, el.clientWidth * 0.6, el.clientHeight * 0.8)))
+      // a bit more of the width on a portrait screen, where the strip has room to spare vertically
+      const share = el.clientWidth < el.clientHeight ? 0.74 : 0.6
+      setFrameW(Math.round(Math.min(680, el.clientWidth * share, el.clientHeight * 0.8)))
     }
     measure()
     window.addEventListener('resize', measure)
@@ -263,6 +366,12 @@ export default function Hero() {
   // where the projection starts: the caught frame's box, as % of the screen
   const fromRect = useRef<Rect | null>(null)
 
+  // the reel's timers and animations, so a skip can stop them whichever stage it's at
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([])
+  const anims = useRef<{ stop: () => void }[]>([])
+  const stopListening = useRef(() => {})
+
+  // any click, key, scroll or tap skips — from the first title card to the landing
   useEffect(() => {
     if (skipIntro) return
     try {
@@ -270,24 +379,37 @@ export default function Hero() {
     } catch {
       /* private mode */
     }
-    const timers: ReturnType<typeof setTimeout>[] = []
-    const anims: { stop: () => void }[] = []
-    const at = (s: number, fn: () => void) => timers.push(setTimeout(fn, s * 1000))
+    const events = ['wheel', 'touchstart', 'keydown', 'pointerdown'] as const
+    const stop = () => events.forEach((e) => window.removeEventListener(e, skip))
+    function skip() {
+      skippedRef.current = true
+      timers.current.forEach(clearTimeout)
+      anims.current.forEach((a) => a.stop())
+      project.set(1)
+      setPhase('done')
+      stop()
+    }
+    events.forEach((e) => window.addEventListener(e, skip, { passive: true }))
+    stopListening.current = stop
+    return stop
+  }, [skipIntro, project])
 
-    at(T.count, () => setCount(2))
-    at(T.count * 2, () => setCount(1))
-    at(T.flash, () => setFlash(true))
-    at(T.flash + 0.1, () => setFlash(false))
+  useEffect(() => {
+    if (!rolling) return
+    const pending = timers.current
+    const running = anims.current
+    const at = (s: number, fn: () => void) => pending.push(setTimeout(fn, s * 1000))
+
     at(T.stripIn, () => {
       setPhase('strip')
       // frames stream in out of the distance; the slight overshoot in the curve is the jolt as it catches
       const target = -targetIndex * pitchRef.current
       stripX.set(target + pitchRef.current * START_PITCHES)
-      anims.push(animate(stripX, target, { duration: T.roll, ease: [0.15, 0.7, 0.3, 1.04] }))
-      anims.push(animate(pan, 1, { duration: T.roll, ease: [0.3, 0, 0.3, 1] }))
+      running.push(animate(stripX, target, { duration: T.roll, ease: [0.15, 0.7, 0.3, 1.04] }))
+      running.push(animate(pan, 1, { duration: T.roll, ease: [0.3, 0, 0.3, 1] }))
     })
     at(T.stripIn + T.roll * T.faceAt, () => {
-      anims.push(animate(face, 1, { duration: T.face, ease: [0.55, 0, 0.2, 1] }))
+      running.push(animate(face, 1, { duration: T.face, ease: [0.55, 0, 0.2, 1] }))
     })
     at(PROJECT_AT, () => {
       // facing the camera now, so the frame's on-screen box is a plain rectangle
@@ -306,28 +428,17 @@ export default function Hero() {
       if (onStrip && heroVideoRef.current) heroVideoRef.current.currentTime = onStrip.currentTime
       project.set(0.001) // re-derive the box from the measured frame before it's shown
       setPhase('project')
-      anims.push(animate(project, 1, { duration: T.project, ease: [0.4, 0, 0.15, 1] }))
+      running.push(animate(project, 1, { duration: T.project, ease: [0.4, 0, 0.15, 1] }))
     })
-    at(LANDED_AT, () => setPhase('done'))
-
-    const events = ['wheel', 'touchstart', 'keydown', 'pointerdown'] as const
-    const stopListening = () => events.forEach((e) => window.removeEventListener(e, skip))
-    function skip() {
-      timers.forEach(clearTimeout)
-      anims.forEach((a) => a.stop())
-      setFlash(false)
-      project.set(1)
+    at(LANDED_AT, () => {
       setPhase('done')
-      stopListening()
-    }
-    events.forEach((e) => window.addEventListener(e, skip, { passive: true }))
-    at(LANDED_AT, stopListening)
+      stopListening.current()
+    })
     return () => {
-      timers.forEach(clearTimeout)
-      anims.forEach((a) => a.stop())
-      stopListening()
+      pending.forEach(clearTimeout)
+      running.forEach((a) => a.stop())
     }
-  }, [skipIntro, targetIndex, stripX, pan, face, project])
+  }, [rolling, targetIndex, stripX, pan, face, project])
 
   const projStyle = useProjection(project, fromRect)
 
@@ -367,19 +478,16 @@ export default function Hero() {
         }}
         className="relative h-full w-full overflow-hidden rounded-(--radius) bg-[#0c0b0a]"
       >
-        {/* everything projected sits in the "gate": warm grade + the weave of film in a projector */}
-        <div className={`absolute inset-0 film-grade ${phase === 'done' ? '' : 'film-weave'}`}>
-          {/* projector light on the screen behind the strip */}
-          {phase === 'strip' && (
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,236,200,0.1),transparent_65%)]" />
-          )}
+        <div className="absolute inset-0">
+          {/* ambience behind the title cards and the reel; the supercut covers it once projected */}
+          {phase !== 'done' && <AmbientLight bright={phase !== 'typing'} />}
 
           {/* the film strip — mounted from the start so the clips are loaded by the time it runs.
               A zero-size pivot at the centre carries the camera angle; the strip slides along its length. */}
           {phase !== 'done' && (
             <div
               className="absolute inset-0"
-              style={{ perspective: CAMERA.perspective, opacity: phase === 'strip' ? 1 : 0, transition: 'opacity 0.6s' }}
+              style={{ perspective: CAMERA.perspective * frameW, opacity: phase === 'strip' ? 1 : 0, transition: 'opacity 0.6s' }}
             >
               <motion.div className="absolute top-1/2 left-1/2 h-0 w-0" style={{ transform: camera }}>
                 <motion.div
@@ -387,7 +495,7 @@ export default function Hero() {
                   style={{ x: stripX, y: '-50%', marginLeft: -(gap + frameW / 2), filter: blur }}
                 >
                   <div
-                    className="film-strip film-strip--h flex items-center"
+                    className="film-strip flex items-center"
                     style={{ height: frameH + hole * 8, gap, paddingInline: gap, '--hole': `${hole}px` } as CSSProperties}
                   >
                     {frames.map((f, i) => (
@@ -439,17 +547,13 @@ export default function Hero() {
               className="absolute -inset-4"
               style={{ scale: scrollScale, x: reduceMotion ? 0 : bgX, y: reduceMotion ? 0 : bgY }}
             >
-              <SupercutVideo videoRef={heroVideoRef} play={!reduceMotion} />
+              <SupercutVideo supercut={supercut} videoRef={heroVideoRef} play={!reduceMotion} />
             </motion.div>
           </motion.div>
-
-          {phase === 'leader' && <Leader number={count} />}
         </div>
 
-        {/* the projector firing */}
-        {flash && <div className="absolute inset-0 z-30 bg-[#fff6e0]" />}
-
-        <FilmTexture strong={phase !== 'done'} />
+        {/* opening title cards, on the dark before the reel */}
+        {phase === 'typing' && <Typewriter lines={lines} onDone={startReel} />}
 
         {/* title: directly on the video with mix-blend-mode: difference */}
         <motion.div
@@ -491,8 +595,9 @@ export default function Hero() {
         </motion.div>
 
         {phase !== 'done' && (
-          <span className="pointer-events-none absolute right-6 bottom-6 z-50 text-[0.6rem] tracking-[0.2em] text-[#ebe4d4]/40 uppercase">
-            Click to skip
+          <span className="pointer-events-none absolute right-6 bottom-6 z-50 text-[0.6rem] tracking-[0.2em] text-(--color-text)/40 uppercase">
+            <span className="pointer-coarse:hidden">Click</span>
+            <span className="hidden pointer-coarse:inline">Tap</span> to skip
           </span>
         )}
       </div>

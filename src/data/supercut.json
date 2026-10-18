@@ -1,5 +1,5 @@
 {
-  "_readme": "The homepage hero: a supercut of these clips, in this order, hard-cut. `id` is a video's id in src/data/media/<trip>.json, `start` the second to cut in at, `length` optional (default `cut` below), `y` where to take the 16:9 band from a portrait clip (0 = top, 0.5 = middle, 1 = bottom). Rebuild with `yarn supercut`.",
+  "_readme": "The homepage hero: a supercut of these clips, in this order, hard-cut. `id` is a video's id in src/data/media/<trip>.json, `start` the second to cut in at, `length` optional (default `cut` below), `y` where to take the 16:9 band from a portrait clip for the landscape cut (0 = top, 0.5 = middle, 1 = bottom), `x` where to take the 9:16 band from a landscape clip for the phone cut (0 = left, 1 = right). Rebuild with `yarn supercut`.",
   "cut": 1.8,
   "clips": [
     { "trip": "iceland", "id": "p1012065-66200d", "start": 1 },
@@ -8,15 +8,15 @@
     { "trip": "iceland", "id": "p1022293-58990c", "start": 2 },
     { "trip": "japan", "id": "p1000396-3a7358", "start": 1 },
     { "trip": "japan", "id": "p1000352-e79297", "start": 1 },
-    { "trip": "iceland", "id": "p1022103-3e31ed", "start": 1 },
+    { "trip": "iceland", "id": "p1022103-3e31ed", "start": 1, "x": 0.85 },
     { "trip": "japan", "id": "p1000688-bda614", "start": 1 },
     { "trip": "france", "id": "img-7302-ef0ea8", "start": 0.5 },
     { "trip": "iceland", "id": "img-0491-fb684c", "start": 1 },
     { "trip": "japan", "id": "p1000349-59c866", "start": 2 },
-    { "trip": "iceland", "id": "p1022361-c580a2", "start": 1 },
+    { "trip": "iceland", "id": "p1022361-c580a2", "start": 1, "x": 0.8 },
     { "trip": "budapest", "id": "img-6104-417315", "start": 2 },
     { "trip": "japan", "id": "img-9784-273513", "start": 10 },
-    { "trip": "iceland", "id": "p1022349-f2eb44", "start": 2 },
+    { "trip": "iceland", "id": "p1022349-f2eb44", "start": 2, "x": 0.8 },
     { "trip": "iceland", "id": "img-0369-51423f", "start": 2 },
     { "trip": "france", "id": "img-7340-d18e41", "start": 6 },
     { "trip": "japan", "id": "p1001037-8c83d1", "start": 0.5 }

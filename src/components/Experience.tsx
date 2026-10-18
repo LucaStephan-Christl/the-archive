@@ -110,7 +110,8 @@ export default function Experience({ destination }: ExperienceProps) {
             const places = dayPlaces(day.items);
             return (
             <div key={day.date} className="relative pt-9 pl-8 sm:pl-10">
-              <span className="absolute top-9 left-[calc(0.65rem+0.5px)] h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-(--color-accent)" />
+              {/* centred on the header's first line: pt-9 + half the day number's line height (text-lg → 1.75rem) */}
+              <span className="absolute top-[calc(2.25rem+0.875rem)] left-[calc(0.65rem+0.5px)] h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-(--color-accent)" />
               <Reveal className="mb-4">
                 {/* the day number stays put on the left; everything else wraps beside it
                     (with flex-wrap the number used to end up alone on its own line) */}
@@ -175,7 +176,7 @@ export default function Experience({ destination }: ExperienceProps) {
         <div className="pointer-events-none absolute top-0 bottom-8 left-[1.9rem] w-px sm:left-[2.65rem] bg-(--color-text)/15" />
         {destination.days.map((day) => (
           <div key={day.n} className="relative pt-9 pl-8 sm:pl-10">
-            <span className="absolute top-9 left-[calc(0.65rem+0.5px)] h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-(--color-accent)" />
+            <span className="absolute top-[calc(2.25rem+0.875rem)] left-[calc(0.65rem+0.5px)] h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-(--color-accent)" />
             <Reveal className="mb-4 flex items-baseline gap-3">
               <span className="font-display text-lg font-semibold">
                 {day.n}
